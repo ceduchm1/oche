@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Oche Fléchettes</title>
+<title>Dart</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Oche">
+<meta name="apple-mobile-web-app-title" content="Dart">
 <meta name="theme-color" content="#0E1311">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -897,7 +897,7 @@ function renderSetup(){
   const sv=store.get('oche.game',null),resume=sv&&sv.S&&!sv.S.over&&MODES[sv.S.mode]?sv:null;
   const tooFew=M.min&&n<M.min;
   app.innerHTML=`<div class="setup"><div class="sheet">
-    <header class="brand">${BRAND?`<img class="brandimg" src="${BRAND.src}" alt="${esc(BRAND.alt)}">`:LOGO}<div><h1>Oche</h1><p>${BRAND?esc(BRAND.alt)+' · ':''}Compteur de fléchettes · 1 à 8 joueurs</p></div></header>
+    <header class="brand">${BRAND?`<img class="brandimg" src="${BRAND.src}" alt="${esc(BRAND.alt)}">`:LOGO}<div><h1>Dart</h1><p>${BRAND?esc(BRAND.alt)+' · ':''}Compteur de fléchettes · 1 à 8 joueurs</p></div></header>
     ${resume?`<div class="resume"><div><b>Partie en cours</b><span>${esc(MODES[resume.S.mode].title(resume.S.opts))} · ${resume.S.players.map(p=>esc(p.name)).join(', ')}</span></div><button class="btn primary" data-act="resume">Reprendre</button></div>`:''}
     <div class="cols">
       <section class="block" aria-labelledby="h-jeu"><h2 id="h-jeu">Jeu</h2>
