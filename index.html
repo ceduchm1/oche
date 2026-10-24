@@ -108,6 +108,10 @@ button{font:inherit;color:inherit;touch-action:manipulation}
 .ib:disabled{opacity:.3}
 .prow{display:flex;gap:8px;flex-wrap:wrap}
 .prow .btn{flex:1}
+.rnd{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.rnd input{width:26px;height:26px;margin:0;accent-color:var(--green);flex:none}
+.rnd span{display:flex;flex-direction:column;font-weight:700;font-size:1.05rem}
+.rnd small{font-weight:500;font-size:.85rem;color:var(--muted)}
 .go{min-height:66px;font-size:1.25rem;letter-spacing:.02em}
 .note{margin:0;color:var(--red);font-weight:600;font-size:.95rem}
 
@@ -676,11 +680,11 @@ function optsFor(mode){
   return o;
 }
 
-function newGame(mode,opts,names,starter){
+function newGame(mode,opts,names,starter,cols){
   const M=MODES[mode];
   S={mode,opts:Object.assign({legs:1},opts),cur:0,starter,first:starter,turn:[],tp:[],turnHit:[],turnEnd:false,bust:false,shanghai:false,
      legWin:null,legOver:false,over:false,winner:null,legNo:1,
-     players:names.map((name,i)=>({name,col:i,legs:0,turns:0,out:false,lt:'',st:Object.assign({darts:0,pts:0},M.stats?M.stats():{})}))};
+     players:names.map((name,i)=>({name,col:cols?cols[i]:i,legs:0,turns:0,out:false,lt:'',st:Object.assign({darts:0,pts:0},M.stats?M.stats():{})}))};
   M.setup&&M.setup(S);
   initLeg();
   H=[];
@@ -909,6 +913,7 @@ function renderSetup(){
       <section class="block" aria-labelledby="h-j"><h2 id="h-j">Joueurs <span class="count">${n}/8</span></h2>
         <ol class="plist">${cfg.players.map((nm,i)=>`<li style="--pc:var(--p${i+1})"><span class="chip num">${i+1}</span><input id="player-${i}" data-i="${i}" value="${esc(nm)}" maxlength="16" autocomplete="off" enterkeyhint="done" aria-label="Nom du joueur ${i+1}"><button class="ib" data-act="up" data-i="${i}" ${i?'':'disabled'} aria-label="Monter ${esc(nm)}">↑</button><button class="ib" data-act="del" data-i="${i}" ${n>1?'':'disabled'} aria-label="Retirer ${esc(nm)}">✕</button></li>`).join('')}</ol>
         <div class="prow"><button class="btn" data-act="add" ${n>=8?'disabled':''}>+ Ajouter un joueur</button><button class="btn" data-act="shuffle" ${n<2?'disabled':''}>Mélanger l’ordre</button></div>
+        <label class="rnd"><input type="checkbox" id="random-order" data-act="random" ${cfg.random?'checked':''}><span>Ordre aléatoire<small>Tiré au sort à chaque partie et à chaque revanche</small></span></label>
         ${tooFew?`<p class="note">${M.name} se joue à ${M.min} joueurs minimum.</p>`:''}
         <button class="btn primary go" data-act="start" ${tooFew?'disabled':''}>Lancer la partie</button>
       </section>
@@ -972,8 +977,9 @@ function render(){view==='game'&&S?renderGame():renderSetup()}
 
 /* ================= events ================= */
 function startFromCfg(){
-  const names=cfg.players.map((n,i)=>n.trim()||`Joueur ${i+1}`);
-  newGame(cfg.mode,optsFor(cfg.mode),names,0);
+  let ps=cfg.players.map((n,i)=>({n:n.trim()||`Joueur ${i+1}`,c:i}));
+  if(cfg.random)ps=shuffle(ps);
+  newGame(cfg.mode,optsFor(cfg.mode),ps.map(p=>p.n),0,ps.map(p=>p.c));
   view='game';ui.quit=false;wake();render();
 }
 document.addEventListener('click',e=>{
@@ -1003,7 +1009,8 @@ document.addEventListener('click',e=>{
     case 'quit-no':ui.quit=false;render();break;
     case 'quit-yes':ui.quit=false;view='setup';render();break;
     case 'home':store.del('oche.game');S=null;H=[];view='setup';render();break;
-    case 'rematch':{const n=S.players.length;newGame(S.mode,S.opts,S.players.map(p=>p.name),(S.first+1)%n);render();break}
+    case 'rematch':{const n=S.players.length;let ps=S.players.map(p=>({n:p.name,c:p.col})),st=(S.first+1)%n;if(cfg.random){ps=shuffle(ps);st=0}newGame(S.mode,S.opts,ps.map(p=>p.n),st,ps.map(p=>p.c));render();break}
+    case 'random':cfg.random=b.checked;saveCfg();break;
     case 'undo':ui.verr='';undo();break;
     case 'miss':throwDart({n:0,m:0});break;
     case 'next':nextTurn();break;
