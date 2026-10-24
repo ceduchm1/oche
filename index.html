@@ -237,10 +237,10 @@ button{font:inherit;color:inherit;touch-action:manipulation}
 button.cg-c{border:0;border-radius:0;padding:0;cursor:pointer;min-width:0}
 button.cg-c:active{filter:brightness(1.2);box-shadow:inset 0 0 0 4px var(--ink)}
 button.cg-c:disabled{cursor:default}
-.cg-f{background:var(--cell);color:var(--muted);display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:6px 16px;padding:8px 4px 10px;font-size:1.1rem;font-weight:600;min-width:0}
+.cg-f{background:var(--cell);color:var(--muted);display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:6px 12px;padding:8px 4px 10px;font-size:1.1rem;font-weight:600;min-width:0}
 .cg-f b{color:var(--ink);font:700 1.7rem/1 var(--f-display);font-variant-numeric:tabular-nums}
-.cg-t{display:flex;gap:6px;flex-basis:100%;justify-content:center}
-.cg-t i{font-style:normal;width:3.6rem;height:2.7rem;display:grid;place-items:center;background:var(--surface-2);border-radius:5px;font:700 1.4rem/1 var(--f-display);color:var(--ink)}
+.cg-t{display:flex;gap:6px;justify-content:center}
+.cg-t i{font-style:normal;width:3.3rem;height:2.5rem;display:grid;place-items:center;background:var(--surface-2);border-radius:5px;font:700 1.4rem/1 var(--f-display);color:var(--ink)}
 .cg-f.on .cg-t i{box-shadow:inset 0 -3px 0 var(--pc)}
 .di{width:1.5rem;height:1.5rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;vertical-align:-2px}
 .ck{display:flex;flex-direction:column;gap:8px}
@@ -251,7 +251,8 @@ button.cg-c:disabled{cursor:default}
 .ckb.dbl{background:var(--dbl);color:#FFFFFF;font-size:1.6rem;letter-spacing:.04em}
 .ckb.tpl{background:var(--tpl);color:#FFFFFF;font-size:1.6rem;letter-spacing:.04em}
 .ckb.on{box-shadow:inset 0 0 0 5px var(--ink)}
-.ckb.und{background:var(--red);color:#FFFFFF;font-size:2.4rem}
+.ckb.und{background:var(--red);color:#FFFFFF}
+.ckb .ui{width:2.3rem;height:2.3rem;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
 .ckb.nxt{background:var(--ink);color:var(--bg);font-size:1.5rem}
 .ckb:disabled{opacity:.4;cursor:default}
 @media (max-width:560px){.ckb{min-height:56px;font-size:1.6rem}.ckb.dbl,.ckb.tpl{font-size:1.1rem}.cg-s{font-size:2rem}.cg-c{font-size:1.6rem}}
@@ -852,7 +853,7 @@ function crGrid(s){
   const P=s.players,v=s.opts.variant,n=P.length,L=Math.ceil(n/2),idx=P.map((_,i)=>i);
   const cols=[...idx.slice(0,L).map(i=>({i})),{c:1},...idx.slice(L).map(i=>({i}))];
   const live=!s.over;
-  let h=`<div class="cg" style="grid-template-columns:${cols.map(c=>c.c?'minmax(64px,.8fr)':'minmax(0,1fr)').join(' ')};grid-template-rows:auto repeat(${s.tg.length},minmax(46px,1fr)) auto">`;
+  let h=`<div class="cg" style="grid-template-columns:${cols.map(c=>c.c?'minmax(64px,.8fr)':'minmax(0,1fr)').join(' ')};grid-template-rows:auto repeat(${s.tg.length},minmax(34px,1fr)) auto">`;
   for(const c of cols){
     if(c.c){h+='<div class="cg-c cg-e"></div>';continue}
     const p=P[c.i],on=c.i===s.cur&&live;
@@ -876,7 +877,7 @@ function crGrid(s){
 function crKeysHTML(done){
   const nums=S.tg.slice().sort((a,b)=>a-b),dis=done?'disabled':'';
   return `<div class="ck"><div class="ck1" style="grid-template-columns:repeat(${nums.length},minmax(0,1fr))">${nums.map(t=>`<button class="ckb" data-key="${t}" ${dis}>${t}</button>`).join('')}</div>
-    <div class="ck2"><button class="ckb" data-key="0" ${dis} aria-label="Raté">0</button><button class="ckb dbl${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${dis}>DOUBLE</button><button class="ckb tpl${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${dis}>TRIPLE</button><button class="ckb und" data-act="undo" ${H.length?'':'disabled'} aria-label="Annuler">↶</button><button class="ckb nxt${done?' pulse':''}" data-act="next">Suivant</button></div></div>`;
+    <div class="ck2"><button class="ckb" data-key="0" ${dis} aria-label="Raté">0</button><button class="ckb dbl${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${dis}>DOUBLE</button><button class="ckb tpl${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${dis}>TRIPLE</button><button class="ckb und" data-act="undo" ${H.length?'':'disabled'} aria-label="Annuler"><svg class="ui" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button><button class="ckb nxt${done?' pulse':''}" data-act="next">Suivant</button></div></div>`;
 }
 function cricketPadHTML(){
   const p=S.players[S.cur];
