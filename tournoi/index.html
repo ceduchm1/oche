@@ -1,0 +1,1474 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Dart Tournoi</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tournoi">
+<meta name="theme-color" content="#0E1311">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="https://ceduchm1.github.io/oche/apple-touch-icon.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="https://ceduchm1.github.io/oche/apple-touch-icon-precomposed.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{color-scheme:light}
+html{height:100%}
+body{margin:0;height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);font:14px/1.4 system-ui,-apple-system,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen app. Setup = scrolling two-column sheet; Game = scoreboard pane + throw pane, side by side in landscape, stacked in portrait. Palette taken from the board itself: wire black, sisal ground, board red and green. */
+:root{
+  --bg:#E6E9E2; --surface:#FBFCFA; --surface-2:#EDF0EA; --ink:#131A16; --muted:#55625A; --line:#C9D1C8;
+  --red:#BE2430; --green:#1C6E42; --accent:var(--red); --on-accent:#FFFFFF; --danger-bg:#F8DCDD;
+  --p1:#D0343E; --p2:#1F7A4A; --p3:#2E6CC2; --p4:#C97F0C; --p5:#7E46B6; --p6:#0F8C89; --p7:#BF4580; --p8:#687823;
+  --cell:#FFFFFF; --key:#D3D9D1; --key-ink:#131A16; --dbl:#E9A11C; --tpl:#E0651C; --gold:#B8860B; --silver:#7D878C; --bronze:#A2622F;
+  --b-black:#1B1C1B; --b-cream:#EFE4C6; --b-red:#C9252F; --b-green:#1F7B47; --b-wire:#A9AEA8; --b-num:#F4F1E8; --b-rim:#0E0F0E;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1311; --surface:#18201C; --surface-2:#212B26; --ink:#E8EEE9; --muted:#93A198; --line:#2F3B35;
+  --red:#E4474F; --green:#3DAE6C; --on-accent:#FFFFFF; --danger-bg:#4A1E22;
+  --p1:#F0545D; --p2:#3FB673; --p3:#5C93E6; --p4:#E9A33A; --p5:#A77BE0; --p6:#2DBDB8; --p7:#E36CA5; --p8:#A3B54A;
+  --cell:#050706; --key:#5A605C; --key-ink:#FFFFFF; --dbl:#F0AA2C; --tpl:#E8721F; --gold:#E9B949; --silver:#A9B3B8; --bronze:#C98552;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1311; --surface:#18201C; --surface-2:#212B26; --ink:#E8EEE9; --muted:#93A198; --line:#2F3B35;
+  --red:#E4474F; --green:#3DAE6C; --on-accent:#FFFFFF; --danger-bg:#4A1E22;
+  --p1:#F0545D; --p2:#3FB673; --p3:#5C93E6; --p4:#E9A33A; --p5:#A77BE0; --p6:#2DBDB8; --p7:#E36CA5; --p8:#A3B54A;
+  --cell:#050706; --key:#5A605C; --key-ink:#FFFFFF; --dbl:#F0AA2C; --tpl:#E8721F; --gold:#E9B949; --silver:#A9B3B8; --bronze:#C98552;
+  color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+input{-webkit-user-select:text;user-select:text}
+#app{height:100%;box-sizing:border-box}
+@media (hover:none) and (pointer:coarse){#app{padding-top:16px}}
+button{font:inherit;color:inherit;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--p3);outline-offset:2px}
+
+/* ---------- shared controls ---------- */
+.btn{font:600 1rem/1 var(--f-body);min-height:48px;padding:0 18px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn:disabled{opacity:.38;cursor:default}
+.btn.sm{min-height:40px;padding:0 14px;font-size:.95rem}
+.btn.big{min-height:62px;font-size:1.12rem;flex:1}
+.seg{display:inline-flex;flex-wrap:wrap;gap:3px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:3px}
+.seg button{min-height:42px;padding:0 14px;border:0;border-radius:9px;background:transparent;cursor:pointer;font-weight:600;font-size:.95rem;color:var(--muted)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg.sm button{min-height:34px;padding:0 12px}
+.chip{width:12px;height:12px;border-radius:50%;background:var(--pc);flex:none}
+
+/* ---------- setup ---------- */
+.setup{height:100%;overflow:auto;-webkit-overflow-scrolling:touch}
+.sheet{max-width:1180px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+.brand{display:flex;align-items:center;gap:16px}
+.logo{width:56px;height:56px;flex:none}
+.brandimg{width:112px;height:112px;object-fit:contain;flex:none}
+.gimg{width:46px;height:46px;object-fit:contain;flex:none}
+.lg-k{fill:var(--b-black)}.lg-r{fill:var(--b-red)}.lg-c{fill:var(--b-cream)}.lg-g{fill:var(--b-green)}
+.brand h1{margin:0;font:800 3.2rem/0.9 var(--f-display);letter-spacing:.02em;text-transform:uppercase}
+.brand p{margin:4px 0 0;color:var(--muted);font-weight:500}
+.resume{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--r);padding:14px 16px}
+.resume b{display:block;font:700 1.25rem var(--f-display);text-transform:uppercase;letter-spacing:.03em}
+.resume span{color:var(--muted);font-size:.95rem}
+.cols{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr);gap:28px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.block{display:flex;flex-direction:column;gap:14px;min-width:0}
+.block h2{margin:0;font:700 1rem var(--f-body);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);display:flex;align-items:center;gap:10px}
+.count{font:700 .9rem var(--f-body);color:var(--ink);background:var(--surface-2);border-radius:20px;padding:2px 10px;letter-spacing:.02em}
+.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.mode{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;padding:14px 14px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;min-height:122px}
+.mode .mn{font:700 1.65rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.01em}
+.mode .mt{font:700 .74rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.mode .md{font-size:.9rem;color:var(--muted);line-height:1.35}
+.mode.on{border-color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.optsbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px}
+.optsbox h3{margin:0;font:700 1.5rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.02em}
+.opt{display:flex;flex-direction:column;gap:6px}
+.ol{font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rules{margin:0;color:var(--muted);line-height:1.5;max-width:68ch;font-size:.95rem;border-top:1px solid var(--line);padding-top:12px}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.plist li{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 12px}
+.plist .num{width:28px;height:28px;display:grid;place-items:center;color:#fff;font:700 .95rem var(--f-display)}
+.plist input{flex:1;min-width:0;font:600 1.1rem var(--f-body);color:var(--ink);background:transparent;border:0;padding:10px 4px;outline:none}
+.plist input:focus{background:var(--surface-2);border-radius:8px}
+.ib{width:44px;height:44px;border-radius:10px;border:0;background:var(--surface-2);cursor:pointer;font-size:1.1rem;flex:none}
+.ib:disabled{opacity:.3}
+.prow{display:flex;gap:8px;flex-wrap:wrap}
+.prow .btn{flex:1}
+.rnd{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.rnd input{width:26px;height:26px;margin:0;accent-color:var(--green);flex:none}
+.rnd span{display:flex;flex-direction:column;font-weight:700;font-size:1.05rem}
+.rnd small{font-weight:500;font-size:.85rem;color:var(--muted)}
+.go{min-height:66px;font-size:1.25rem;letter-spacing:.02em}
+.note{margin:0;color:var(--red);font-weight:600;font-size:.95rem}
+
+/* ---------- game ---------- */
+.game{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr)}
+.gbar{display:flex;align-items:center;gap:12px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--surface)}
+.gt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center}
+.gt b{font:700 1.35rem/1.05 var(--f-display);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.gt span{font-size:.85rem;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.gtools{display:flex;gap:8px;align-items:center}
+.gmain{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,42%);gap:16px;min-height:0;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.scores{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px}
+.pad{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+@media (orientation:portrait),(max-width:820px){
+  .gmain{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+  .inwrap{flex:none!important;height:clamp(250px,42vh,620px)}
+}
+@media (max-width:560px){.gt span{display:none}.gtools .seg{display:none}}
+
+/* player cards */
+.pgrid{display:grid;gap:10px;grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
+@media (max-width:560px){.pgrid{grid-template-columns:repeat(min(var(--cols),2),minmax(0,1fr))}}
+.pc{position:relative;overflow:hidden;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:12px 14px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.pc header{display:flex;align-items:center;gap:8px;min-width:0}
+.pc .nm{font:700 1.15rem/1.1 var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.pc .big{font:800 var(--sz)/0.92 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.pc .sub{font:600 1.05rem var(--f-display);letter-spacing:.02em}
+.pc .meta{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;min-height:1.1em;overflow-wrap:anywhere}
+.pc .co{color:var(--green);font-weight:700}
+.pc.on{background:color-mix(in srgb,var(--pc) 14%,var(--surface))}
+.pc.on::before{content:"";position:absolute;inset:0 0 auto 0;height:7px;background:var(--pc)}
+.pc.out{opacity:.42}
+.legs{display:inline-flex;gap:4px}
+.legs i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--pc)}
+.legs i.f{background:var(--pc)}
+.badge{font:700 .72rem/1 var(--f-body);letter-spacing:.1em;padding:4px 7px;border-radius:6px;background:var(--red);color:var(--on-accent)}
+.badge.dim{background:var(--surface-2);color:var(--muted)}
+.lives{display:flex;gap:5px;flex-wrap:wrap;padding-block:2px}
+.lives i{width:14px;height:14px;border-radius:50%;border:2px solid var(--pc)}
+.lives i.f{background:var(--pc)}
+.prog{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--pc)}
+.strip{display:flex;gap:6px;flex-wrap:wrap}
+.strip span{min-width:2.6rem;padding:6px 9px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font:700 1.05rem/1 var(--f-display);text-align:center;color:var(--muted);letter-spacing:.03em}
+.strip .past{opacity:.45}
+.strip .cur{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+/* cricket table */
+.ctw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.ct{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.ct th,.ct td{text-align:center;padding:4px 6px;border-bottom:1px solid var(--line)}
+.ct thead th{padding:10px 6px 8px;font:700 1rem/1.15 var(--f-body);vertical-align:bottom}
+.ct thead th .hn{display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct .num{font:800 1.9rem/1 var(--f-display);width:3.6rem;color:var(--ink)}
+.ct tr.dead .num{color:var(--muted);text-decoration:line-through;text-decoration-thickness:3px}
+.ct tr.dead td{opacity:.45}
+.ct td{height:2.9rem;color:var(--muted)}
+.ct td.cl{color:var(--pc)}
+.ct .on{background:color-mix(in srgb,var(--pc) 13%,transparent)}
+.ct thead th.on{box-shadow:inset 0 5px 0 var(--pc)}
+.ct tfoot td{font:800 2.2rem/1 var(--f-display);color:var(--ink);padding-block:10px;border-bottom:0}
+.ct tfoot .num{font:700 .8rem var(--f-body);letter-spacing:.1em;color:var(--muted)}
+.mk{width:2.1rem;height:2.1rem;fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;vertical-align:middle}
+
+/* turn bar */
+.turn{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px;transition:background .2s}
+.turn.bust{background:var(--danger-bg)}
+.tw{display:flex;align-items:center;gap:10px;min-width:0}
+.tw b{font:700 1.5rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.02em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt{font:800 2.2rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{height:52px;border-radius:10px;border:1.5px dashed var(--line);display:grid;place-items:center;font:700 1.6rem/1 var(--f-display);letter-spacing:.02em}
+.slot.f{border-style:solid;border-color:var(--ink);background:var(--surface-2)}
+.slot.miss{color:var(--muted);font-size:1.2rem}
+.hint{font-size:.95rem;font-weight:600;color:var(--muted);min-height:1.25em;line-height:1.3}
+.hint .co{color:var(--green);font:700 1.15rem var(--f-display);letter-spacing:.03em}
+.hint .bad{color:var(--red)}
+
+/* input */
+.inwrap{flex:1;min-height:0;container-type:size;display:grid;place-items:center;position:relative}
+.dboard{width:min(100cqw,100cqh);height:min(100cqw,100cqh);display:block;touch-action:manipulation;cursor:crosshair}
+.dboard .c-k{fill:var(--b-black)}.dboard .c-c{fill:var(--b-cream)}.dboard .c-r{fill:var(--b-red)}.dboard .c-g{fill:var(--b-green)}.dboard .rim{fill:var(--b-rim)}
+.dboard .wire{fill:none;stroke:var(--b-wire);stroke-width:.45}
+.dboard .bn{fill:var(--b-num);font:700 10px var(--f-display);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.dboard .sg{transition:opacity .15s}
+.dboard.focus .sg:not(.hl){opacity:.26}
+.dboard .tapmk{fill:var(--b-num);stroke:var(--b-rim);stroke-width:1.2;pointer-events:none}
+.dboard .tapmk.new{animation:tap .35s ease-out}
+.keys{width:100%;height:100%;display:grid;grid-template-columns:repeat(20,minmax(0,1fr));grid-auto-rows:1fr;gap:8px}
+.keys .k{grid-column:span 4;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font:700 1.9rem/1 var(--f-display);cursor:pointer;min-height:0}
+.keys .k.b{grid-column:span 5;font-size:1.25rem;font-family:var(--f-body)}
+.keys .k.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.keys .k.dim{opacity:.4}
+.keys .k:active{background:var(--surface-2)}
+.acts{display:flex;gap:10px}
+.vol{width:100%;height:100%;display:flex;flex-direction:column;gap:8px;min-height:0}
+.vq{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:6px}
+.vq .k{min-height:46px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface-2);font:700 1.15rem/1 var(--f-display);cursor:pointer}
+.vk{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:8px}
+.vk .k{border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font:700 2rem/1 var(--f-display);cursor:pointer;min-height:0}
+.vk .k.ok{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.vk .k:active,.vq .k:active{background:var(--surface-2)}
+.verr{margin:0;color:var(--red);font-weight:600}
+.gmain.tablemode{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+.tablemode .inwrap{display:none}
+.tablemode .pad{display:block}
+.cg{flex:1;min-height:0;display:grid;gap:3px;background:var(--line);border:3px solid var(--line);border-radius:var(--r);overflow:hidden}
+.cg-h{background:var(--cell);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;padding:6px 6px 4px;border-bottom:6px solid transparent;min-width:0}
+.cg-h.on{background:var(--pc)}
+.cg-n{display:flex;align-items:center;gap:6px;max-width:100%;font:500 1.15rem/1.2 var(--f-body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg-h.on .cg-n,.cg-h.on .cg-s{color:#FFFFFF}
+.cg-h.on .cg-n{font-weight:700}
+.cg-h.on .chip{background:#FFFFFF}
+.cg-s{font:800 2.6rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.cg-c{background:var(--green);color:#FFFFFF;display:grid;place-items:center;font:800 2.1rem/1 var(--f-display)}
+.cg-c.bull{background:var(--red);font-size:1.7rem}
+.cg-c.dead{background:var(--surface-2);color:var(--muted);text-decoration:line-through;text-decoration-thickness:3px}
+.cg-c.cg-e{background:var(--surface-2)}
+.cg-x{background:var(--cell);color:var(--ink);display:grid;place-items:center;border:0;border-radius:0;padding:0;min-width:0;font:inherit}
+.cg-x.cl{color:var(--pc)}
+.cg-x{position:relative}
+.cg-x .mk{position:absolute;inset:12% 0;margin:auto;width:auto;height:auto;max-width:4.6rem;max-height:4.6rem}
+.cg-x.on,.cg-f.on{background:color-mix(in srgb,var(--pc) 16%,var(--cell))}
+button.cg-c{border:0;border-radius:0;padding:0;cursor:pointer;min-width:0}
+button.cg-c:active{filter:brightness(1.2);box-shadow:inset 0 0 0 4px var(--ink)}
+button.cg-c:disabled{cursor:default}
+.cg-f{background:var(--cell);color:var(--muted);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 12px;padding:8px 4px 10px;font-size:1.1rem;font-weight:600;min-width:0}
+.cg-f b{color:var(--ink);font:700 1.7rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.cg-t{display:grid;grid-template-columns:repeat(3,minmax(0,3.3rem));gap:5px;justify-content:center;max-width:100%;min-width:0}
+.cg-t i{font-style:normal;width:100%;min-width:0;height:2.5rem;overflow:hidden;display:grid;place-items:center;background:var(--surface-2);border-radius:5px;font:700 1.4rem/1 var(--f-display);color:var(--ink)}
+.cg-f.on .cg-t i{box-shadow:inset 0 -3px 0 var(--pc)}
+.di{width:1.5rem;height:1.5rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;vertical-align:-2px}
+.ck{display:flex;flex-direction:column;gap:8px}
+.ck1,.ck2{display:grid;gap:8px}
+.ck2{grid-template-columns:1fr 2fr 2fr 1.3fr 1.8fr}
+.ckb{min-height:62px;border:0;border-radius:8px;background:var(--key);color:var(--key-ink);font:600 2.1rem/1 var(--f-display);cursor:pointer;min-width:0}
+.ckb:active{filter:brightness(1.15)}
+.ckb.dbl{background:var(--dbl);color:#FFFFFF;font-size:1.6rem;letter-spacing:.04em}
+.ckb.tpl{background:var(--tpl);color:#FFFFFF;font-size:1.6rem;letter-spacing:.04em}
+.ckb.on{box-shadow:inset 0 0 0 5px var(--ink)}
+.ckb.und{background:var(--red);color:#FFFFFF}
+.ckb .ui{width:2.3rem;height:2.3rem;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.ckb.nxt{background:var(--ink);color:var(--bg);font-size:1.5rem}
+.ckb:disabled{opacity:.4;cursor:default}
+@media (max-width:560px){.cg-t{flex-basis:100%;gap:4px}.cg-t i{height:2.1rem;font-size:1.05rem}.cg-f{padding-inline:3px}.ckb{min-height:56px;font-size:1.6rem}.ckb.dbl,.ckb.tpl{font-size:1.1rem}.cg-s{font-size:2rem}.cg-c{font-size:1.6rem}}
+.tablemode .acts .btn.big{min-width:104px}
+.tablemode .acts .btn.mul.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+@media (max-width:820px){.tablemode .pad{grid-template-columns:minmax(0,1fr)}.tablemode .acts .btn.big{min-width:0}}
+.tablemode .ctw{flex:1;min-height:0}
+.tablemode .ct{height:100%}
+.tablemode .mk{width:2.8rem;height:2.8rem}
+.tablemode td.on{box-shadow:inset 2px 0 0 var(--pc),inset -2px 0 0 var(--pc)}
+.ct td.tapc{padding:3px}
+.cell{width:100%;height:100%;min-height:3rem;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;display:grid;place-items:center}
+.cell:active{background:color-mix(in srgb,var(--pc) 32%,transparent)}
+.cell:disabled{cursor:default}
+.mlist{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;align-items:center}
+.mlist span{font:700 1.3rem/1 var(--f-display);padding:8px 12px;border-radius:8px;background:var(--surface-2);border:1.5px solid var(--pc)}
+.mlist em{font-style:normal;color:var(--muted)}
+.cpad{width:100%;height:100%;display:grid;grid-auto-rows:minmax(0,1fr);gap:6px}
+.cr{display:grid;grid-template-columns:5.2rem repeat(6,minmax(0,1fr));gap:6px;min-height:0}
+.cr .cn{display:flex;align-items:center;gap:4px;font:800 1.7rem/1 var(--f-display)}
+.cr .cn .mk{width:1.5rem;height:1.5rem;color:var(--pc)}
+.cr .k{grid-column:span 2;min-height:0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font:700 1.45rem/1 var(--f-display);cursor:pointer}
+.cr .k.m2{border-color:color-mix(in srgb,var(--green) 45%,var(--line))}
+.cr .k.m3{border-color:color-mix(in srgb,var(--red) 45%,var(--line));background:var(--surface-2)}
+.cr .k.w{grid-column:span 3}
+.cr .k:active{background:var(--ink);color:var(--bg)}
+.cr.dead{opacity:.35}
+.ct .mpr{display:block;font:600 .75rem var(--f-body);color:var(--muted);letter-spacing:.04em}
+@media (max-width:560px){.vq{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.btn.pulse{animation:pulse 1.2s ease-in-out infinite}
+.fly{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:800 6rem/1 var(--f-display);color:var(--ink);background:var(--surface);border:2px solid var(--ink);border-radius:18px;padding:10px 22px;pointer-events:none;animation:fly .75s ease-out forwards;white-space:nowrap}
+.fly.bad{color:var(--red);border-color:var(--red)}
+
+/* overlays */
+.ov{position:fixed;inset:0;z-index:50;background:rgb(8 12 10 / .55);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dlg{background:var(--surface);color:var(--ink);border-radius:20px;width:100%;max-width:620px;max-height:100%;overflow:auto;padding:26px;display:flex;flex-direction:column;gap:16px;animation:rise .25s ease-out}
+.eyebrow{margin:0;font-size:.8rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.dlg h2{margin:0;font:800 2.6rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+.dlg p{margin:0;color:var(--muted);line-height:1.45}
+.dacts{display:flex;gap:10px;flex-wrap:wrap}
+.dacts .btn{flex:1 1 160px}
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rank li{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.rank li:first-child{background:color-mix(in srgb,var(--pc) 16%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--pc)}
+.rank .pos{font:800 1.6rem/1 var(--f-display);width:1.6rem;text-align:center;font-variant-numeric:tabular-nums}
+.rank .rn{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rank .rn b{font-size:1.1rem}
+.rank .rn small{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.rank .rv{font:700 1.35rem/1 var(--f-display);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+
+/* ---------- tournoi ---------- */
+.tabs{align-self:flex-start}
+.tabs button{min-height:48px;padding:0 26px;font-size:1.08rem}
+.fmts{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.fmts{grid-template-columns:minmax(0,1fr)}}
+.tname{font:600 1.1rem var(--f-body);width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);outline:none}
+.tname:focus{border-color:var(--ink)}
+.plist li.tsep{margin-top:8px}
+.tsum{margin:0;color:var(--muted);font-weight:600}
+.thr{font:700 .95rem/1.2 var(--f-body);color:var(--pc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg-m{font:700 .95rem/1.1 var(--f-body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cg-h.on .cg-m{color:#FFFFFF}
+.tour{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr)}
+.thub{display:grid;grid-template-columns:minmax(0,1fr) minmax(330px,34%);gap:16px;min-height:0;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tpane{min-height:0;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px}
+@media (orientation:portrait),(max-width:820px){.thub{grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;overflow:auto;align-content:start}.tpane{overflow:visible;min-height:auto}.br{flex:none}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.panel h3{margin:0 0 10px;font:700 .82rem var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.prg{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:4px}
+.prg i{display:block;height:100%;background:var(--green)}
+.br{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);gap:26px;flex:1;min-height:max-content;overflow-x:auto;padding:2px 2px 8px}
+.brc{display:flex;flex-direction:column;gap:6px;min-width:0}
+.brc h4{margin:0;font:700 .8rem var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center}
+.brm{flex:1;display:flex;flex-direction:column}
+.bp{flex:1;display:flex;flex-direction:column;position:relative}
+.bw{flex:1;display:flex;align-items:center;position:relative;padding:5px 0}
+.brc:not(:last-child) .bw::after{content:"";position:absolute;right:-13px;top:50%;width:13px;border-top:2px solid var(--line)}
+.brc:not(:last-child) .bp::after{content:"";position:absolute;right:-13px;top:25%;bottom:25%;border-right:2px solid var(--line)}
+.brc:not(:first-child) .bw::before{content:"";position:absolute;left:-13px;top:50%;width:13px;border-top:2px solid var(--line)}
+.bm{width:100%;display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;padding:0;text-align:left;cursor:pointer;min-width:0}
+.bm.ready{border-color:var(--green);box-shadow:inset 5px 0 0 var(--green)}
+.bm.live{border-color:var(--red);box-shadow:inset 5px 0 0 var(--red)}
+.bm.bye{opacity:.45}
+.bm.final{border-width:2.5px;border-color:var(--gold)}
+.bs{display:flex;align-items:center;gap:8px;padding:9px 10px;min-width:0;font-weight:600}
+.bs+.bs{border-top:1px solid var(--line)}
+.bs b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.bs em{font:700 1.35rem/1 var(--f-display);font-style:normal;font-variant-numeric:tabular-nums}
+.bs.w b{font-weight:800}
+.bs.w{background:color-mix(in srgb,var(--green) 12%,transparent)}
+.bs.l{color:var(--muted)}
+.bs.tbd b{color:var(--muted);font-style:italic;font-weight:500}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.stt{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.stt th{font:700 .72rem var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 5px 8px;text-align:center}
+.stt td{padding:9px 5px;text-align:center;border-top:1px solid var(--line);font-weight:600}
+.stt .l{text-align:left}
+.stt td.l{display:flex;align-items:center;gap:8px;min-width:0}
+.stt td.l b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14rem}
+.stt td.pts{font:800 1.35rem/1 var(--f-display)}
+.stt tr.q td{background:color-mix(in srgb,var(--green) 10%,transparent)}
+.stt tr.lead td{background:color-mix(in srgb,var(--gold) 16%,transparent)}
+.stt .badge{background:var(--green)}
+.nxm{display:flex;flex-direction:column;gap:12px}
+.nxm h3{margin:0}
+.nxr{margin:0;font:700 1rem var(--f-body);color:var(--accent);letter-spacing:.04em}
+.nxv{display:flex;flex-direction:column;gap:6px}
+.nxv span{display:flex;align-items:center;gap:10px;font:800 2rem/1.05 var(--f-display);text-transform:uppercase;min-width:0}
+.nxv span b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.nxv .chip{width:16px;height:16px}
+.nxv em{font:600 .95rem var(--f-body);font-style:normal;color:var(--muted);padding-left:26px}
+.nxm .go{width:100%}
+.ml{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.mlb{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);cursor:pointer;text-align:left;min-width:0}
+.mlb .mr{font:700 .72rem var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mlb .mv{display:flex;align-items:center;gap:7px;font-weight:600;flex-wrap:wrap;min-width:0}
+.mlb .mv em{font:700 1.15rem/1 var(--f-display);font-style:normal;color:var(--ink);padding-inline:2px;font-variant-numeric:tabular-nums}
+.mlb .mv .lo{color:var(--muted);font-weight:500}
+.vs{font:600 1rem var(--f-body);color:var(--muted);text-transform:none;letter-spacing:0;display:block;margin-block:4px}
+.pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pick .btn{min-height:64px;font-size:1.1rem;white-space:normal;text-align:center}
+.mst{display:flex;flex-direction:column;gap:6px}
+.mst div{display:flex;gap:10px;align-items:baseline;padding:8px 10px;background:var(--surface-2);border-radius:10px}
+.mst b{flex:none}
+.mst small{color:var(--muted);font-size:.88rem}
+.champ{position:relative;height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--gold) 26%,var(--bg)) 0%,var(--bg) 62%)}
+.conf{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.conf i{position:absolute;top:-30px;width:10px;height:16px;border-radius:2px;background:var(--c);animation:fall 5s cubic-bezier(.3,.6,.6,1) var(--d) 2 both}
+.cbox{position:relative;max-width:840px;margin:0 auto;padding-block:30px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
+.trophy{width:132px;height:132px;animation:rise .6s ease-out}
+.trophy .tg{fill:var(--gold)}.trophy .tl{fill:none;stroke:var(--gold);stroke-width:7;stroke-linecap:round}.trophy .td{fill:var(--ink)}.trophy .tb{fill:var(--bg);opacity:.35}
+.cname{margin:0;font:800 clamp(3rem,10vw,6.6rem)/.9 var(--f-display);text-transform:uppercase;color:var(--pc);text-wrap:balance;overflow-wrap:anywhere}
+.cmem{margin:0;font:700 1.25rem var(--f-body);color:var(--ink)}
+.podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:10px;width:100%;max-width:580px;margin-top:6px}
+.pod{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0}
+.pn{display:flex;align-items:center;gap:6px;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pb{width:100%;display:grid;place-items:center;border-radius:10px 10px 0 0;font:800 2.6rem/1 var(--f-display);color:#FFFFFF}
+.p1 .pb{height:124px;background:var(--gold)}.p2 .pb{height:86px;background:var(--silver)}.p3 .pb{height:60px;background:var(--bronze)}
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;width:100%}
+.aw{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.al{font:700 .74rem var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.aw b{font:800 2.1rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.an{font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.csum{margin:0;color:var(--muted);font-weight:600}
+.cbox .dacts{width:100%;max-width:640px}
+@keyframes fall{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--x),112vh) rotate(calc(var(--r) + 600deg))}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 50%,transparent)}50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--accent) 0%,transparent)}}
+@keyframes fly{0%{opacity:0;transform:translate(-50%,-40%) scale(.8)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
+@keyframes tap{from{r:9;opacity:.4}to{r:3;opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+'use strict';
+/* ================= helpers ================= */
+const BOARD=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+const app=document.getElementById('app');
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lbl=d=>!d||d.n===0?'Raté':d.n===25?(d.m===2?'BULL':'25'):(d.m===3?'T':d.m===2?'D':'')+d.n;
+const dv=d=>d.n*d.m;
+const avg3=st=>st.darts?(st.pts/st.darts*3).toFixed(1):'—';
+const pl=(n,w)=>n+' '+w+(Math.abs(n)>1?'s':'');
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const sumTurn=s=>s.turn.reduce((a,d)=>a+dv(d),0);
+
+/* ---------- checkout solver ---------- */
+const THROWS=[];
+for(let n=1;n<=20;n++)THROWS.push({n,m:1},{n,m:2},{n,m:3});
+THROWS.push({n:25,m:1},{n:25,m:2});
+const DPREF=[20,16,18,12,10,8,14,6,4,2,19,17,15,13,11,9,7,5,3,1];
+const setupCost=t=>t.n===25?(t.m===2?3.5:2.5):t.m===1?1:t.m===3?(t.n===20?1.1:t.n===19?1.3:1.8):3;
+function finCost(t,out){
+  if(out==='straight')return t.n===25?(t.m===2?2:1.5):t.m===1?0:t.m===3?1:1.2;
+  if(t.m===1)return null;
+  if(t.m===3)return out==='master'?1.5:null;
+  if(t.n===25)return 1.6;
+  return DPREF.indexOf(t.n)*0.08;
+}
+const coCache={};
+function checkout(score,darts,out){
+  if(score<=0||darts<=0||score>180)return null;
+  const key=score+'|'+darts+'|'+out;
+  if(key in coCache)return coCache[key];
+  const fin={};
+  for(const t of THROWS){const c=finCost(t,out);if(c==null)continue;const v=dv(t);if(!fin[v]||c<fin[v].c)fin[v]={t,c}}
+  let best=null;
+  if(fin[score])best={d:[fin[score].t],c:fin[score].c};
+  if(!best&&darts>=2)for(const a of THROWS){const f=fin[score-dv(a)];if(f){const c=setupCost(a)+f.c;if(!best||c<best.c)best={d:[a,f.t],c}}}
+  if(!best&&darts>=3)for(const a of THROWS)for(const b of THROWS){const f=fin[score-dv(a)-dv(b)];if(f){const c=setupCost(a)+setupCost(b)+f.c;if(!best||c<best.c)best={d:dv(a)>=dv(b)?[a,b,f.t]:[b,a,f.t],c}}}
+  return coCache[key]=best?best.d.map(lbl):null;
+}
+
+/* ---------- shared renderers ---------- */
+const SZ={1:'9rem',2:'7.4rem',3:'5.4rem',4:'5.4rem',5:'4.2rem',6:'4.2rem',7:'3.5rem',8:'3.5rem'};
+function legsDots(s,p){
+  const n=s.opts.legs||1;if(n<2)return '';
+  return `<span class="legs" aria-label="${p.legs} manche(s) gagnée(s)">${Array.from({length:n},(_,k)=>`<i class="${k<p.legs?'f':''}"></i>`).join('')}</span>`;
+}
+function cards(s,f){
+  const n=s.players.length,cols=n<=2?n:n<=4?2:n<=6?3:4;
+  return `<div class="pgrid" style="--cols:${cols};--sz:${SZ[n]}">`+s.players.map((p,i)=>{
+    const c=f(p,i);
+    return `<article class="pc${i===s.cur&&!s.over?' on':''}${p.out?' out':''}" style="--pc:var(--p${p.col+1})">
+      <header><span class="chip"></span><b class="nm">${esc(p.name)}</b>${legsDots(s,p)}${c.badge||''}</header>${p.mem?`<div class="thr">▸ ${esc(who(p))}</div>`:''}
+      <div class="big">${c.main}</div>${c.sub!=null?`<div class="sub">${c.sub}</div>`:''}
+      <div class="meta">${c.meta||''}</div></article>`;
+  }).join('')+'</div>';
+}
+const MK=['','<path d="M5 19L19 5"/>','<path d="M5 19L19 5M5 5l14 14"/>','<path d="M6.8 17.2L17.2 6.8M6.8 6.8l10.4 10.4"/><circle cx="12" cy="12" r="9.6"/>'];
+const markSvg=k=>k?`<svg class="mk" viewBox="0 0 24 24" role="img" aria-label="${k} marque${k>1?'s':''}">${MK[Math.min(k,3)]}</svg>`:'';
+const rankBy=(s,f)=>s.players.map((_,i)=>i).sort((a,b)=>f(s.players[a],s.players[b]));
+
+/* ================= game modes ================= */
+const X01turn=(p,t)=>{p.st.pts+=t;if(p.turns<3){p.st.f9+=t;p.st.f9n++}if(t===180)p.st.t180++;else if(t>=140)p.st.t140++;else if(t>=100)p.st.t100++;p.st.best=Math.max(p.st.best,t)};
+const X01done=(s,p)=>{X01turn(p,p.ts);p.st.co=Math.max(p.st.co,p.ts);p.st.bl=p.st.bl?Math.min(p.st.bl,p.ld):p.ld;s.legWin=s.cur;s.turnEnd=true};
+const crMarks=(s,p)=>s.tg.reduce((a,t)=>a+Math.min(3,p.marks[t]),0);
+function crWin(s){
+  const v=s.opts.variant;
+  const order=[s.cur,...s.players.map((_,i)=>i).filter(i=>i!==s.cur)];
+  for(const i of order){
+    const p=s.players[i];
+    if(!s.tg.every(t=>p.marks[t]>=3))continue;
+    const o=s.players.filter(q=>q!==p);
+    if(v==='std'&&o.some(q=>q.pts>p.pts))continue;
+    if(v==='cut'&&o.some(q=>q.pts<p.pts))continue;
+    s.legWin=i;s.turnEnd=true;return;
+  }
+}
+const HALVE=[15,16,'D',17,18,'T',19,20,'B'];
+const halveLbl=t=>t==='D'?'Double':t==='T'?'Triple':t==='B'?'Bull':String(t);
+const bobTarget=p=>Math.min(p.turns+1,21)===21?25:p.turns+1;
+function killerCheck(s){
+  const alive=s.players.map((p,i)=>i).filter(i=>!s.players[i].out);
+  if(alive.length===1){s.legWin=alive[0];s.turnEnd=true}
+}
+
+const MODES={
+  x01:{
+    name:'X01',tag:'301 · 501 · 701 · 901',
+    desc:'Descendez de 301, 501… jusqu’à zéro pile.',
+    rules:'Chaque volée est soustraite du score. Passer sous zéro (ou rester à 1 en sortie double) annule la volée : c’est un bust. Double out : la dernière fléchette doit être un double, le bull (50) compte comme double. Master : double ou triple. Double in : il faut un double pour commencer à compter.',
+    opts:[
+      {k:'start',l:'Score de départ',c:[[301,'301'],[501,'501'],[701,'701'],[901,'901'],[1001,'1001']],d:501},
+      {k:'in',l:'Entrée',c:[['straight','Libre'],['double','Double in'],['master','Master in']],d:'straight'},
+      {k:'out',l:'Sortie',c:[['straight','Libre'],['double','Double out'],['master','Master out']],d:'double'},
+      {k:'legs',l:'Manches à gagner',c:[[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5']],d:1}],
+    title:o=>`${o.start}${o.in!=='straight'?' · '+(o.in==='double'?'Double in':'Master in'):''} · ${o.out==='straight'?'Sortie libre':o.out==='double'?'Double out':'Master out'}`,
+    stats:()=>({t180:0,t140:0,t100:0,best:0,co:0,f9:0,f9n:0,bl:0}),
+    leg(s,p){p.score=s.opts.start;p.open=s.opts.in==='straight'},
+    startTurn(s,p){p.ts=p.score;p.to=p.open},
+    dart(s,p,d){
+      const o=s.opts;
+      if(!p.open){if((o.in==='double'&&d.m===2)||(o.in==='master'&&d.m>=2))p.open=true;else return}
+      if(d.n===0)return;
+      const left=p.score-dv(d),strict=o.out!=='straight';
+      const bust=left<0||(strict&&left===1)||(left===0&&((o.out==='double'&&d.m!==2)||(o.out==='master'&&d.m<2)));
+      if(bust){p.score=p.ts;p.open=p.to;s.bust=true;s.turnEnd=true;return}
+      p.score=left;
+      if(left===0){X01done(s,p)}
+    },
+    endTurn(s,p){X01turn(p,s.bust?0:p.ts-p.score)},
+    turnText:(s,p)=>s.bust?'BUST':(ui.input==='volley'&&!s.turn.length?(ui.vb||'0'):p.ts-p.score),
+    say:(s,p)=>s.bust?'Dépassé':(p.ts-p.score===0?'Rien':String(p.ts-p.score)),
+    callNext:(s,q)=>`${who(q)}, ${q.score}`,
+    hint(s,p){
+      if(s.bust)return `<span class="bad">Bust : le score revient à ${p.score}.</span>`;
+      if(!p.open)return `Touchez un ${s.opts.in==='double'?'double':'double ou un triple'} pour commencer à compter.`;
+      const co=checkout(p.score,3-s.turn.length,s.opts.out);
+      return co?`Finition : <span class="co">${co.join(' · ')}</span>`:(p.score<=170?'Pas de finition possible avec les fléchettes restantes.':'');
+    },
+    board:s=>cards(s,p=>{
+      const co=p.open?checkout(p.score,3,s.opts.out):null;
+      return {main:p.score,meta:`Moy. ${avg3(p.st)}${p.lt?' · '+p.lt:''}${co&&p.score<=170?` · <span class="co">${co.join(' ')}</span>`:''}`};
+    }),
+    rank:s=>rankBy(s,(a,b)=>a.score-b.score),
+    res:(s,p)=>p.score===0?'0':`${p.score} restants`,
+    statLine:(s,p)=>`Moy. ${avg3(p.st)} · 9 premières ${p.st.f9n?(p.st.f9/p.st.f9n).toFixed(1):'—'} · 180 ×${p.st.t180} · 140+ ×${p.st.t140} · 100+ ×${p.st.t100}${p.st.co?' · Finition max '+p.st.co:''}${p.st.bl?' · Meilleure manche '+p.st.bl+' fl.':''}`
+  },
+
+  cricket:{
+    name:'Cricket',tag:'Standard · Cut-throat · Tactique',
+    desc:'Fermez 15 à 20 et le bull, marquez là où l’adversaire est encore ouvert.',
+    rules:'Trois marques ferment un numéro (simple = 1, double = 2, triple = 3 ; bull 25 = 1, bull 50 = 2). Sur un numéro fermé chez vous mais ouvert chez un adversaire, chaque marque en plus rapporte sa valeur. Standard : les points vont à vous, il faut tout fermer avec le meilleur score. Cut-throat : les points vont aux adversaires encore ouverts, il faut tout fermer avec le plus petit score. Sans points : le premier qui ferme tout gagne. Tactique : de 10 à 20 plus le bull. Aléatoire : 6 numéros tirés au sort plus le bull.',
+    opts:[
+      {k:'variant',l:'Variante',c:[['std','Standard'],['cut','Cut-throat'],['none','Sans points']],d:'std'},
+      {k:'set',l:'Numéros',c:[['classic','15 à 20 + Bull'],['tactic','Tactique 10 à 20'],['random','Aléatoire']],d:'classic'},
+      {k:'rounds',l:'Limite de tours',c:[[0,'Aucune'],[15,'15'],[20,'20'],[25,'25']],d:0},
+      {k:'legs',l:'Manches à gagner',c:[[1,'1'],[2,'2'],[3,'3'],[5,'5']],d:1}],
+    title:o=>`Cricket ${o.variant==='std'?'':o.variant==='cut'?'Cut-throat':'sans points'}${o.set==='tactic'?' · Tactique':o.set==='random'?' · Aléatoire':''}`,
+    stats:()=>({marks:0}),
+    rounds:o=>o.rounds,
+    setup(s){
+      const o=s.opts;
+      s.tg=o.set==='tactic'?[20,19,18,17,16,15,14,13,12,11,10,25]:o.set==='random'?shuffle(Array.from({length:20},(_,i)=>i+1)).slice(0,6).sort((a,b)=>b-a).concat(25):[20,19,18,17,16,15,25];
+    },
+    leg(s,p){p.marks=Object.fromEntries(s.tg.map(t=>[t,0]));p.pts=0},
+    dart(s,p,d){
+      const t=d.n;if(!s.tg.includes(t))return;
+      const v=s.opts.variant,have=p.marks[t],extra=d.m-Math.min(d.m,Math.max(0,3-have));
+      p.marks[t]=Math.min(3,have+d.m);p.st.marks+=d.m;
+      if(extra&&v!=='none'){
+        const val=t*extra,open=s.players.filter(q=>q!==p&&q.marks[t]<3);
+        if(v==='std'&&open.length)p.pts+=val;
+        if(v==='cut')open.forEach(q=>q.pts+=val);
+      }
+      crWin(s);
+    },
+    turnText:s=>pl(s.turn.reduce((a,d)=>a+(s.tg.includes(d.n)?d.m:0),0),'marque'),
+    hint(s,p){
+      if(CT&&s.turn.length<3&&!s.turnEnd)return `Fléchette ${s.turn.length+1}/3 : touchez la case dans la colonne de ${esc(p.name)}${ui.mul>1?` (${ui.mul===2?'double':'triple'} activé)`:' (Double ou Triple avant la case si besoin)'}.`;
+      const open=s.tg.filter(t=>p.marks[t]<3).map(t=>t===25?'Bull':t);
+      return open.length?`À fermer : ${open.join(' · ')}`:(s.opts.variant==='std'?'Tout est fermé : marquez des points pour passer devant.':'Tout est fermé.');
+    },
+    hl:(s,p)=>n=>s.tg.includes(n)&&!s.players.every(q=>q.marks[n]>=3),
+    board(s){
+      if(CT)return crGrid(s);
+      const P=s.players,v=s.opts.variant;
+      let h=`<div class="ctw"><table class="ct"><thead><tr><th class="num" aria-label="Numéro"></th>`;
+      h+=P.map((p,i)=>`<th class="${i===s.cur&&!s.over?'on':''}" style="--pc:var(--p${p.col+1})"><span class="hn"><span class="chip"></span>${esc(p.name)}</span><small class="mpr">MPR ${p.st.darts?(p.st.marks/p.st.darts*3).toFixed(2):'—'}</small>${legsDots(s,p)}</th>`).join('')+'</tr></thead><tbody>';
+      for(const t of s.tg){
+        const dead=P.every(p=>p.marks[t]>=3);
+        h+=`<tr class="${dead?'dead':''}"><th class="num">${t===25?'B':t}</th>`+P.map((p,i)=>`<td class="${p.marks[t]>=3?'cl ':''}${i===s.cur&&!s.over?'on':''}${CT?' tapc':''}" style="--pc:var(--p${p.col+1})">${CT&&i===s.cur&&!s.over?`<button class="cell" data-cell="${t}" ${dead||s.turnEnd||s.legOver||s.turn.length>=3?'disabled':''} aria-label="Marque sur ${t===25?'le bull':'le '+t}">${markSvg(p.marks[t])}</button>`:markSvg(p.marks[t])}</td>`).join('')+'</tr>';
+      }
+      h+=`</tbody><tfoot><tr><td class="num">${v==='none'?'MARQ.':'PTS'}</td>`+P.map((p,i)=>`<td class="${i===s.cur&&!s.over?'on':''}" style="--pc:var(--p${p.col+1})">${v==='none'?crMarks(s,p):p.pts}</td>`).join('')+'</tr></tfoot></table></div>';
+      return h;
+    },
+    rank(s){
+      const v=s.opts.variant,m=p=>crMarks(s,p);
+      return rankBy(s,(a,b)=>v==='std'?(b.pts-a.pts)||(m(b)-m(a)):v==='cut'?(a.pts-b.pts)||(m(b)-m(a)):m(b)-m(a));
+    },
+    res:(s,p)=>s.opts.variant==='none'?pl(crMarks(s,p),'marque'):`${p.pts} pts`,
+    statLine:(s,p)=>`MPR ${p.st.darts?(p.st.marks/p.st.darts*3).toFixed(2):'—'} · ${pl(p.st.darts,'fléchette')}`
+  },
+
+  atc:{
+    name:'Tour de l’horloge',tag:'Around the clock · 1 → 20',
+    desc:'Touchez chaque numéro dans l’ordre, de 1 à 20, puis le bull.',
+    rules:'Chaque joueur vise d’abord le 1. Une fléchette sur la cible fait passer au numéro suivant. Avec l’option avancée, un double fait avancer de 2 et un triple de 3. Le premier qui termine la séquence gagne.',
+    opts:[
+      {k:'adv',l:'Progression',c:[['single','1 case par touche'],['multi','Double = 2, Triple = 3']],d:'single'},
+      {k:'bull',l:'Arrivée',c:[[true,'Finir au bull'],[false,'Finir au 20']],d:true}],
+    title:o=>`Tour de l’horloge${o.adv==='multi'?' · avancé':''}`,
+    stats:()=>({hits:0}),
+    setup(s){s.seq=Array.from({length:20},(_,i)=>i+1).concat(s.opts.bull?[25]:[])},
+    leg(s,p){p.idx=0},
+    dart(s,p,d){
+      const last=s.seq.length-1;
+      if(d.n!==s.seq[p.idx])return;
+      p.st.hits++;
+      let ni=p.idx+(s.opts.adv==='multi'&&d.n!==25?d.m:1);
+      if(s.opts.bull&&p.idx<last)ni=Math.min(ni,last);
+      if(ni>last){p.idx=s.seq.length;s.legWin=s.cur;s.turnEnd=true}else p.idx=ni;
+    },
+    hint:(s,p)=>`Cible : ${s.seq[p.idx]===25?'Bull':s.seq[p.idx]}`,
+    hl:(s,p)=>n=>n===s.seq[p.idx],
+    board:s=>cards(s,p=>({
+      main:p.idx>=s.seq.length?'✓':s.seq[p.idx]===25?'BULL':s.seq[p.idx],
+      sub:`<div class="prog"><i style="width:${Math.round(p.idx/s.seq.length*100)}%"></i></div>`,
+      meta:`${p.idx}/${s.seq.length} · Précision ${p.st.darts?Math.round(p.st.hits/p.st.darts*100):0}%`})),
+    rank:s=>rankBy(s,(a,b)=>b.idx-a.idx),
+    res:(s,p)=>`${p.idx}/${s.seq.length}`,
+    statLine:(s,p)=>`Précision ${p.st.darts?Math.round(p.st.hits/p.st.darts*100):0}% · ${pl(p.st.darts,'fléchette')}`
+  },
+
+  shanghai:{
+    name:'Shanghai',tag:'Un numéro par tour',
+    desc:'Tour 1 on vise le 1, tour 2 le 2… seuls ces touchés comptent.',
+    rules:'À chaque tour, seule la cible du tour rapporte des points (simple, double, triple). Simple, double et triple du même numéro dans une seule volée font un Shanghai : victoire immédiate si l’option est active. Sinon, le meilleur total gagne.',
+    opts:[
+      {k:'rounds',l:'Nombre de tours',c:[[7,'7'],[10,'10'],[20,'20']],d:7},
+      {k:'instant',l:'Shanghai = victoire',c:[[true,'Oui'],[false,'Non']],d:true}],
+    title:o=>`Shanghai · ${o.rounds} tours`,
+    rounds:o=>o.rounds,
+    leg(s,p){p.pts=0},
+    dart(s,p,d){
+      const r=p.turns+1;
+      if(d.n===r)p.pts+=dv(d);
+      const ms=new Set(s.turn.filter(x=>x.n===r).map(x=>x.m));
+      if(ms.has(1)&&ms.has(2)&&ms.has(3)){s.shanghai=true;if(s.opts.instant){s.legWin=s.cur;s.turnEnd=true}}
+    },
+    turnText:(s,p)=>s.turn.reduce((a,d)=>a+(d.n===p.turns+1?dv(d):0),0),
+    hint:(s,p)=>`Cible : ${p.turns+1}`+(s.shanghai?' · <span class="co">Shanghai !</span>':''),
+    hl:(s,p)=>n=>n===p.turns+1,
+    strip:(s,p)=>({items:Array.from({length:s.opts.rounds},(_,i)=>i+1),cur:p.turns}),
+    board:s=>cards(s,p=>({main:p.pts,meta:p.lt||''})),
+    rank:s=>rankBy(s,(a,b)=>b.pts-a.pts),
+    res:(s,p)=>`${p.pts} pts`,
+    statLine:(s,p)=>pl(p.st.darts,'fléchette')
+  },
+
+  killer:{
+    name:'Killer',tag:'Élimination · 2+ joueurs',min:2,
+    desc:'Devenez Killer sur votre numéro, puis retirez les vies des autres.',
+    rules:'Chaque joueur reçoit un numéro au hasard. Touchez votre numéro (le double en mode Doubles) pour devenir Killer. Un Killer qui touche le numéro d’un adversaire lui retire des vies : 1 par double en mode Doubles, ou simple = 1, double = 2, triple = 3. Le dernier joueur en vie gagne.',
+    opts:[
+      {k:'lives',l:'Vies',c:[[3,'3'],[5,'5']],d:3},
+      {k:'hits',l:'Segments qui comptent',c:[['double','Doubles seulement'],['all','Tous (S1 · D2 · T3)']],d:'double'},
+      {k:'self',l:'Toucher son numéro en Killer',c:[[true,'Coûte une vie'],[false,'Sans effet']],d:true},
+      {k:'legs',l:'Manches à gagner',c:[[1,'1'],[2,'2'],[3,'3']],d:1}],
+    title:o=>`Killer · ${o.lives} vies${o.hits==='double'?' · doubles':''}`,
+    setup(s){const nums=shuffle(Array.from({length:20},(_,i)=>i+1));s.players.forEach((p,i)=>p.num=nums[i])},
+    leg(s,p){p.lives=s.opts.lives;p.killer=false},
+    dart(s,p,d){
+      if(d.n<1||d.n>20)return;
+      const pow=s.opts.hits==='double'?(d.m===2?1:0):d.m;
+      if(!pow)return;
+      if(d.n===p.num){
+        if(!p.killer){p.killer=true;return}
+        if(s.opts.self){p.lives=Math.max(0,p.lives-pow);if(!p.lives){p.out=true;s.turnEnd=true}}
+      }else if(p.killer){
+        s.players.forEach(q=>{if(q!==p&&!q.out&&q.num===d.n){q.lives=Math.max(0,q.lives-pow);if(!q.lives)q.out=true}});
+      }
+      killerCheck(s);
+    },
+    turnText:()=>'',
+    hint(s,p){
+      const dbl=s.opts.hits==='double';
+      if(!p.killer)return `Touchez ${dbl?'le double du ':'le '}${p.num} pour devenir Killer.`;
+      const t=s.players.filter(q=>q!==p&&!q.out).map(q=>q.num).sort((a,b)=>a-b);
+      return `Killer ! Visez ${dbl?'les doubles : ':''}${t.join(' · ')}`;
+    },
+    hl:(s,p)=>{
+      const dbl=s.opts.hits==='double';
+      const nums=p.killer?s.players.filter(q=>q!==p&&!q.out).map(q=>q.num):[p.num];
+      return (n,m)=>nums.includes(n)&&(!dbl||m===2);
+    },
+    board:s=>cards(s,p=>({
+      main:p.num,
+      badge:p.out?'<span class="badge dim">ÉLIMINÉ</span>':p.killer?'<span class="badge">KILLER</span>':'',
+      sub:`<span class="lives">${Array.from({length:s.opts.lives},(_,k)=>`<i class="${k<p.lives?'f':''}"></i>`).join('')}</span>`,
+      meta:pl(p.lives,'vie')})),
+    rank:s=>rankBy(s,(a,b)=>(a.out-b.out)||(b.lives-a.lives)||(b.killer-a.killer)),
+    res:(s,p)=>p.out?'Éliminé':pl(p.lives,'vie'),
+    statLine:(s,p)=>`Numéro ${p.num} · ${pl(p.st.darts,'fléchette')}`
+  },
+
+  halveit:{
+    name:'Halve-It',tag:'Moitié · 9 cibles',
+    desc:'Touchez la cible du tour, sinon votre score est divisé par deux.',
+    rules:'Les cibles se suivent : 15, 16, un double, 17, 18, un triple, 19, 20, bull. Chaque fléchette sur la cible ajoute sa valeur. Une volée sans aucune touche divise le score par deux (arrondi en dessous). Le meilleur score après 9 tours gagne.',
+    opts:[{k:'start',l:'Score de départ',c:[[0,'0'],[40,'40']],d:40}],
+    title:()=>'Halve-It',
+    rounds:()=>9,
+    leg(s,p){p.pts=s.opts.start;p.tp=0},
+    startTurn(s,p){p.tp=0},
+    dart(s,p,d){
+      const t=HALVE[p.turns];
+      const ok=t==='D'?d.m===2:t==='T'?d.m===3:t==='B'?d.n===25:d.n===t;
+      if(ok&&d.n)p.tp+=dv(d);
+    },
+    endTurn(s,p){if(p.tp>0)p.pts+=p.tp;else p.pts=Math.floor(p.pts/2)},
+    turnText:(s,p)=>p.tp?'+'+p.tp:(s.turn.length?'0':''),
+    hint:(s,p)=>`Cible : ${halveLbl(HALVE[p.turns])}`+(s.turn.length&&!p.tp?' · <span class="bad">rien pour l’instant, le score sera divisé par deux</span>':''),
+    hl:(s,p)=>{const t=HALVE[p.turns];return t==='D'?(n,m)=>m===2:t==='T'?(n,m)=>m===3:t==='B'?n=>n===25:n=>n===t},
+    strip:(s,p)=>({items:HALVE.map(halveLbl),cur:p.turns}),
+    board:s=>cards(s,(p,i)=>({main:p.pts,sub:i===s.cur&&p.tp?`+${p.tp} en cours`:null,meta:p.lt||''})),
+    rank:s=>rankBy(s,(a,b)=>b.pts-a.pts),
+    res:(s,p)=>`${p.pts} pts`,
+    statLine:(s,p)=>pl(p.st.darts,'fléchette')
+  },
+
+  countup:{
+    name:'Score max',tag:'Count-Up',
+    desc:'Accumulez le plus de points possible en un nombre de tours fixe.',
+    rules:'Chaque fléchette ajoute sa valeur au total (triple 20 = 60, bull = 50). Le meilleur total à la fin des tours gagne. Idéal pour travailler le scoring.',
+    opts:[{k:'rounds',l:'Nombre de tours',c:[[8,'8'],[10,'10'],[15,'15'],[20,'20']],d:8}],
+    title:o=>`Score max · ${o.rounds} tours`,
+    rounds:o=>o.rounds,
+    leg(s,p){p.pts=0},
+    dart(s,p,d){p.pts+=dv(d);p.st.pts+=dv(d)},
+    board:s=>cards(s,p=>({main:p.pts,meta:`Moy. ${avg3(p.st)}${p.lt?' · '+p.lt:''}`})),
+    rank:s=>rankBy(s,(a,b)=>b.pts-a.pts),
+    res:(s,p)=>`${p.pts} pts`,
+    statLine:(s,p)=>`Moy. ${avg3(p.st)} par volée · ${pl(p.st.darts,'fléchette')}`
+  },
+
+  bobs27:{
+    name:'Bob’s 27',tag:'Entraînement doubles',
+    desc:'Partez de 27 et faites le tour des doubles, du D1 au double bull.',
+    rules:'Tour 1 : D1, tour 2 : D2… jusqu’au double bull au tour 21. Chaque double touché ajoute sa valeur. Une volée sans double retire la valeur du double visé. Avec l’élimination, un joueur à 0 ou moins est éliminé.',
+    opts:[{k:'elim',l:'Élimination à 0',c:[[true,'Oui'],[false,'Non']],d:true}],
+    title:()=>'Bob’s 27',
+    stats:()=>({hits:0}),
+    rounds:()=>21,
+    leg(s,p){p.pts=27;p.th=0},
+    startTurn(s,p){p.th=0},
+    dart(s,p,d){const t=bobTarget(p);if(d.n===t&&d.m===2){p.pts+=dv(d);p.th++;p.st.hits++}},
+    endTurn(s,p){if(!p.th){const t=bobTarget(p);p.pts-=t*2;if(s.opts.elim&&p.pts<=0)p.out=true}},
+    turnText:(s,p)=>p.th?'×'+p.th:'',
+    hint:(s,p)=>{const t=bobTarget(p);return `Cible : ${t===25?'double bull (50)':'D'+t} · un raté complet coûte ${t*2}`},
+    hl:(s,p)=>{const t=bobTarget(p);return (n,m)=>n===t&&m===2},
+    board:s=>cards(s,p=>({main:p.pts,badge:p.out?'<span class="badge dim">ÉLIMINÉ</span>':'',meta:`Cible ${bobTarget(p)===25?'DB':'D'+bobTarget(p)} · ${pl(p.st.hits,'double')}`})),
+    rank:s=>rankBy(s,(a,b)=>(a.out-b.out)||(a.out?b.turns-a.turns:b.pts-a.pts)),
+    res:(s,p)=>p.out?'Éliminé':`${p.pts} pts`,
+    statLine:(s,p)=>`${pl(p.st.hits,'double')} touché${p.st.hits>1?'s':''} · ${pl(p.st.darts,'fléchette')}`
+  }
+};
+MODES.atc.turnText=s=>pl(s.turn.filter((d,i)=>s.turnHit&&s.turnHit[i]).length,'touche');
+
+/* ================= state ================= */
+let cfg=Object.assign({mode:'x01',opts:{},players:['Joueur 1','Joueur 2']},store.get('ochet.cfg',{}));
+if(!MODES[cfg.mode])cfg.mode='x01';
+let ui=Object.assign({input:'board',crInput:'table',voice:false,tab:'play'},store.get('ochet.ui2',{}));
+ui.mul=1;ui.quit=false;ui.vb='';ui.verr='';ui.ask=0;
+let view='setup',S=null,H=[],CT=false;
+const saveCfg=()=>store.set('ochet.cfg',cfg);
+const saveUi=()=>store.set('ochet.ui2',{input:ui.input,crInput:ui.crInput,voice:ui.voice,tab:ui.tab});
+const save=()=>{if(S)store.set('ochet.game',{S,H:H.slice(-60)})};
+function optsFor(mode,src){
+  const M=MODES[mode],o={},cur=(src||cfg.opts)[mode]||{};
+  M.opts.forEach(op=>{o[op.k]=op.c.some(c=>c[0]===cur[op.k])?cur[op.k]:op.d});
+  return o;
+}
+
+function newGame(mode,opts,names,starter,cols){
+  const M=MODES[mode];
+  S={mode,opts:Object.assign({legs:1},opts),cur:0,starter,first:starter,turn:[],tp:[],turnHit:[],turnEnd:false,bust:false,shanghai:false,
+     legWin:null,legOver:false,over:false,winner:null,legNo:1,
+     players:names.map((name,i)=>({name,col:cols?cols[i]:i,legs:0,turns:0,out:false,lt:'',st:Object.assign({darts:0,pts:0},M.stats?M.stats():{})}))};
+  M.setup&&M.setup(S);
+  initLeg();
+  H=[];
+  save();
+}
+function initLeg(){
+  const M=MODES[S.mode];
+  S.players.forEach(p=>{p.turns=0;p.out=false;p.lt='';p.ld=0;M.leg(S,p)});
+  S.cur=S.starter;S.legWin=null;S.legOver=false;
+  resetTurn();
+}
+function resetTurn(){
+  S.turn=[];S.tp=[];S.turnHit=[];S.turnEnd=false;S.bust=false;S.shanghai=false;S.vol=null;S.markMode=false;ui.vb='';
+  const M=MODES[S.mode];M.startTurn&&M.startTurn(S,S.players[S.cur]);
+}
+function snap(){H.push(JSON.stringify(S));if(H.length>400)H.shift()}
+function undo(){if(!H.length)return;S=JSON.parse(H.pop());ui.mul=1;save();render()}
+
+function throwDart(d,pos){
+  if(!S||S.over||S.legOver||S.turn.length>=3||S.turnEnd||S.markMode)return;
+  snap();
+  const M=MODES[S.mode],p=S.players[S.cur];
+  const before=JSON.stringify(p);
+  S.turn.push(d);S.tp.push(pos||null);p.st.darts++;p.ld++;
+  M.dart(S,p,d);
+  S.turnHit.push(d.n!==0&&JSON.stringify(Object.assign({},p,{st:null}))!==JSON.stringify(Object.assign({},JSON.parse(before),{st:null})));
+  if(S.legWin!=null)legWon();
+  save();render();
+  fly(lbl(d),S.bust);
+  if(S.bust)say('Dépassé');
+}
+function legWon(){
+  const w=S.players[S.legWin];
+  w.legs++;
+  if(w.legs>=(S.opts.legs||1)){S.over=true;S.winner=S.legWin;say(`${S.shanghai?'Shanghai ! ':''}Partie gagnée par ${w.name}`);store.set('ochet.game',{S,H:H.slice(-60)})}
+  else{S.legOver=true;say(`Manche pour ${w.name}`)}
+}
+function nextTurn(noSnap){
+  if(!S||S.over)return;
+  if(S.legOver){snap();S.legNo++;S.starter=(S.starter+1)%S.players.length;initLeg();save();render();return}
+  if(!noSnap)snap();
+  const M=MODES[S.mode],p=S.players[S.cur];
+  if(S.markMode){p.st.darts+=3;p.ld+=3}
+  while(!S.markMode&&S.turn.length<3&&!S.turnEnd&&S.legWin==null){S.turn.push({n:0,m:0});S.tp.push(null);S.turnHit.push(false);p.st.darts++;p.ld++;M.dart(S,p,{n:0,m:0})}
+  if(S.legWin!=null){legWon();save();render();return}
+  const said=M.say?M.say(S,p):'';
+  M.endTurn&&M.endTurn(S,p);
+  p.turns++;
+  p.lt=S.vol!=null?(S.bust?'Bust':String(S.vol)):S.turn.map(lbl).join(' ');
+  if(M.check)M.check(S);
+  if(S.mode==='killer')killerCheck(S);
+  if(S.legWin!=null){legWon();save();render();return}
+  const R=M.rounds?M.rounds(S.opts):0;
+  const act=S.players.filter(q=>!q.out);
+  if((R&&act.every(q=>q.turns>=R))||!act.length){S.legWin=M.rank(S)[0];legWon();save();render();return}
+  const n=S.players.length;
+  for(let k=1;k<=n;k++){const j=(S.cur+k)%n;if(!S.players[j].out){S.cur=j;break}}
+  resetTurn();
+  const q=S.players[S.cur];
+  say([said,M.callNext?M.callNext(S,q):who(q)].filter(Boolean).join('. '));
+  save();render();
+}
+
+/* ---------- X01 : saisie du total de la volée ---------- */
+const BADV=[163,166,169,172,173,175,176,178,179];
+function volleyError(msg){ui.verr=msg;ui.vb='';render()}
+function submitVolley(){
+  if(!S||S.mode!=='x01'||S.over||S.legOver||S.turn.length||S.turnEnd)return;
+  const v=+(ui.vb||0),p=S.players[S.cur],o=S.opts,strict=o.out!=='straight';
+  if(v>180||BADV.includes(v))return volleyError(`${v} est impossible en 3 fléchettes.`);
+  const left=p.score-v;
+  if(left===0){
+    const co=checkout(p.score,3,o.out);
+    if(!co)return volleyError(`${p.score} ne se finit pas en ${o.out==='double'?'double out':'master out'}.`);
+    ui.ask=co.length;ui.verr='';render();return;
+  }
+  ui.verr='';snap();
+  S.vol=v;S.turnEnd=true;
+  if(v>0)p.open=true;
+  if(left<0||(strict&&left===1)){S.bust=true;p.score=p.ts;p.open=p.to}else p.score=left;
+  p.st.darts+=3;p.ld+=3;
+  nextTurn(true);
+}
+function finishVolley(k){
+  const p=S.players[S.cur];ui.ask=0;snap();
+  S.vol=p.score;p.score=0;p.open=true;p.st.darts+=k;p.ld+=k;
+  X01done(S,p);legWon();save();render();
+}
+function volleyHTML(){
+  const q=[26,41,45,60,81,85,100,140,180];
+  return `<div class="vol"><div class="vq">${q.map(v=>`<button class="k" data-vq="${v}">${v}</button>`).join('')}</div>
+    <div class="vk">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="k" data-vd="${n}">${n}</button>`).join('')}<button class="k" data-vd="del" aria-label="Effacer">⌫</button><button class="k" data-vd="0">0</button><button class="k ok" data-vd="ok">OK</button></div>
+    ${ui.verr?`<p class="verr">${ui.verr}</p>`:''}</div>`;
+}
+const typeVolley=c=>{if(c==='del')ui.vb=(ui.vb||'').slice(0,-1);else if((ui.vb||'').length<3)ui.vb=((ui.vb||'')+c).replace(/^0+(?=\d)/,'');render()};
+
+/* ================= voice & screen ================= */
+function say(t){
+  if(!ui.voice||!t)return;
+  try{const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}
+}
+let wl=null;
+async function wake(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&view==='game')wake()});
+
+/* ================= dartboard ================= */
+const RR={bi:6.5,bo:14,ti:54,to:65,di:86,do:98};
+let boardEl=null;
+function getBoard(){
+  if(boardEl)return boardEl;
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox','-112 -112 224 224');
+  svg.setAttribute('class','dboard');
+  svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','Cible : touchez un segment pour saisir la fléchette, le bord noir compte comme raté');
+  const pt=(r,a)=>{const t=a*Math.PI/180;return[(r*Math.sin(t)).toFixed(2),(-r*Math.cos(t)).toFixed(2)]};
+  const sec=(r1,r2,a1,a2)=>{const[x1,y1]=pt(r2,a1),[x2,y2]=pt(r2,a2),[x3,y3]=pt(r1,a2),[x4,y4]=pt(r1,a1);return`M${x1} ${y1}A${r2} ${r2} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r1} ${r1} 0 0 0 ${x4} ${y4}Z`};
+  let h='<circle class="rim" r="112"/>',w='';
+  BOARD.forEach((n,i)=>{
+    const a1=i*18-9,a2=i*18+9,ev=i%2===0,sc=ev?'c-k':'c-c',rc=ev?'c-r':'c-g';
+    h+=`<path class="sg ${sc}" data-n="${n}" data-m="1" d="${sec(RR.bo,RR.ti,a1,a2)}"/>`;
+    h+=`<path class="sg ${rc}" data-n="${n}" data-m="3" d="${sec(RR.ti,RR.to,a1,a2)}"/>`;
+    h+=`<path class="sg ${sc}" data-n="${n}" data-m="1" d="${sec(RR.to,RR.di,a1,a2)}"/>`;
+    h+=`<path class="sg ${rc}" data-n="${n}" data-m="2" d="${sec(RR.di,RR.do,a1,a2)}"/>`;
+    const[tx,ty]=pt(105.5,i*18);h+=`<text class="bn" x="${tx}" y="${ty}">${n}</text>`;
+    const[lx1,ly1]=pt(RR.bo,a1),[lx2,ly2]=pt(RR.do,a1);w+=`<line class="wire" x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}"/>`;
+  });
+  h+=`<circle class="sg c-g" data-n="25" data-m="1" r="${RR.bo}"/><circle class="sg c-r" data-n="25" data-m="2" r="${RR.bi}"/>`;
+  [RR.bi,RR.bo,RR.ti,RR.to,RR.di,RR.do].forEach(r=>w+=`<circle class="wire" r="${r}"/>`);
+  svg.innerHTML=h+`<g pointer-events="none">${w}</g><g class="marks"></g>`;
+  svg.addEventListener('click',e=>{
+    const r=svg.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width*224-112,y=(e.clientY-r.top)/r.height*224-112;
+    const dist=Math.hypot(x,y);
+    let ang=Math.atan2(x,-y)*180/Math.PI;if(ang<0)ang+=360;
+    const n=BOARD[Math.floor(((ang+9)%360)/18)];
+    let d;
+    if(dist<=RR.bi)d={n:25,m:2};else if(dist<=RR.bo)d={n:25,m:1};
+    else if(dist<=RR.ti)d={n,m:1};else if(dist<=RR.to)d={n,m:3};
+    else if(dist<=RR.di)d={n,m:1};else if(dist<=RR.do)d={n,m:2};else d={n:0,m:0};
+    throwDart(d,d.n?[+x.toFixed(1),+y.toFixed(1)]:null);
+  });
+  return boardEl=svg;
+}
+function updateBoard(hl){
+  const b=getBoard();
+  b.classList.toggle('focus',!!hl);
+  b.querySelectorAll('.sg').forEach(el=>el.classList.toggle('hl',!!hl&&hl(+el.dataset.n,+el.dataset.m)));
+  const g=b.querySelector('.marks');
+  g.innerHTML=(S.tp||[]).map((p,i)=>p?`<circle class="tapmk${i===S.tp.length-1?' new':''}" cx="${p[0]}" cy="${p[1]}" r="3"/>`:'').join('');
+}
+function keypadHTML(hl){
+  const dim=f=>hl&&!f?' dim':'';
+  let h='<div class="keys" role="group" aria-label="Pavé de saisie">';
+  for(let n=1;n<=20;n++)h+=`<button class="k${dim(hl&&(hl(n,1)||hl(n,2)||hl(n,3)))}" data-key="${n}">${n}</button>`;
+  h+=`<button class="k b${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}">Double</button>`;
+  h+=`<button class="k b${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}">Triple</button>`;
+  h+=`<button class="k b${dim(hl&&(hl(25,1)||hl(25,2)))}" data-key="25">25</button>`;
+  h+=`<button class="k b${dim(hl&&hl(25,2))}" data-key="50">Bull 50</button>`;
+  return h+'</div>';
+}
+const DART_ICON='<svg class="di" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l8-8M11 13l1.5 1.5 6-6-1.5-1.5zM15 5l4 4M17.5 3.5l3 3"/></svg>';
+function crGrid(s){
+  const P=s.players,v=s.opts.variant,n=P.length,L=Math.ceil(n/2),idx=P.map((_,i)=>i);
+  const cols=[...idx.slice(0,L).map(i=>({i})),{c:1},...idx.slice(L).map(i=>({i}))];
+  const live=!s.over;
+  let h=`<div class="cg" style="grid-template-columns:${cols.map(c=>c.c?'minmax(64px,.8fr)':'minmax(0,1fr)').join(' ')};grid-template-rows:auto repeat(${s.tg.length},minmax(34px,1fr)) auto">`;
+  for(const c of cols){
+    if(c.c){h+='<div class="cg-c cg-e"></div>';continue}
+    const p=P[c.i],on=c.i===s.cur&&live;
+    h+=`<div class="cg-h${on?' on':''}" style="--pc:var(--p${p.col+1})"><span class="cg-n"><span class="chip"></span>${esc(p.name)}</span>${p.mem?`<span class="cg-m">▸ ${esc(who(p))}</span>`:''}<span class="cg-s">${v==='none'?crMarks(s,p):p.pts}</span></div>`;
+  }
+  for(const t of s.tg){
+    const dead=P.every(q=>q.marks[t]>=3);
+    for(const c of cols){
+      if(c.c){h+=`<button class="cg-c${t===25?' bull':''}${dead?' dead':''}" data-cell="${t}" ${!live||dead||s.turnEnd||s.legOver||s.turn.length>=3?'disabled':''} aria-label="Fléchette sur ${t===25?'le bull':'le '+t}">${t===25?'Bull':t}</button>`;continue}
+      const p=P[c.i],on=c.i===s.cur&&live,k=p.marks[t],st=`style="--pc:var(--p${p.col+1})"`;
+      h+=`<div class="cg-x${on?' on':''}${k>=3?' cl':''}" ${st}>${markSvg(k)}</div>`;
+    }
+  }
+  for(const c of cols){
+    if(c.c){h+='<div class="cg-c cg-e"></div>';continue}
+    const p=P[c.i],on=c.i===s.cur&&live,tv=on?s.turn:[];
+    h+=`<div class="cg-f${on?' on':''}" style="--pc:var(--p${p.col+1})">${(s.opts.legs||1)>1?`<span>Manches <b>${p.legs}</b></span>`:''}<span>${DART_ICON} <b>${p.st.darts}</b></span><span>MPR <b>${p.st.darts?(p.st.marks/p.st.darts*3).toFixed(2):'0.00'}</b></span><span class="cg-t">${[0,1,2].map(k=>`<i>${tv[k]?lbl(tv[k]):''}</i>`).join('')}</span></div>`;
+  }
+  return h+'</div>';
+}
+function crKeysHTML(done){
+  const nums=S.tg.slice().sort((a,b)=>a-b),dis=done?'disabled':'';
+  return `<div class="ck"><div class="ck1" style="grid-template-columns:repeat(${nums.length},minmax(0,1fr))">${nums.map(t=>`<button class="ckb" data-key="${t}" ${dis}>${t}</button>`).join('')}</div>
+    <div class="ck2"><button class="ckb" data-key="0" ${dis} aria-label="Raté">0</button><button class="ckb dbl${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${dis}>DOUBLE</button><button class="ckb tpl${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${dis}>TRIPLE</button><button class="ckb und" data-act="undo" ${H.length?'':'disabled'} aria-label="Annuler"><svg class="ui" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button><button class="ckb nxt${done?' pulse':''}" data-act="next">Suivant</button></div></div>`;
+}
+function cricketPadHTML(){
+  const p=S.players[S.cur];
+  return `<div class="cpad" style="--pc:var(--p${p.col+1})" role="group" aria-label="Cases du cricket">${S.tg.map(t=>{
+    const dead=S.players.every(q=>q.marks[t]>=3);
+    const ms=t===25?[[1,'25'],[2,'50']]:[[1,'S'+t],[2,'D'+t],[3,'T'+t]];
+    return `<div class="cr${dead?' dead':''}"><span class="cn">${t===25?'Bull':t}${markSvg(p.marks[t])}</span>${ms.map(([m,l])=>`<button class="k m${m}${t===25?' w':''}" data-key="${t}" data-m="${m}">${l}</button>`).join('')}</div>`;
+  }).join('')}</div>`;
+}
+function fly(t,bad){
+  const w=document.getElementById('inwrap');if(!w)return;
+  const el=document.createElement('div');el.className='fly'+(bad?' bad':'');el.textContent=bad?'BUST':t;
+  w.appendChild(el);setTimeout(()=>el.remove(),800);
+}
+
+/* ================= views ================= */
+const BRAND={src:'logo.png',alt:'La Tête Inn'};
+const LOGO='<svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" class="lg-k"/><circle cx="24" cy="24" r="18" class="lg-r"/><circle cx="24" cy="24" r="14.5" class="lg-c"/><circle cx="24" cy="24" r="8" class="lg-g"/><circle cx="24" cy="24" r="3.5" class="lg-r"/></svg>';
+
+function renderSetup(){
+  const M=MODES[cfg.mode],o=optsFor(cfg.mode),n=cfg.players.length;
+  const sv=store.get('ochet.game',null),resume=sv&&sv.S&&!sv.S.over&&MODES[sv.S.mode]?sv:null;
+  const tooFew=M.min&&n<M.min;
+  app.innerHTML=`<div class="setup"><div class="sheet">
+    <header class="brand">${BRAND?`<img class="brandimg" src="${BRAND.src}" alt="${esc(BRAND.alt)}">`:LOGO}<div><h1>Dart</h1><p>${BRAND?esc(BRAND.alt)+' · ':''}Compteur de fléchettes · 1 à 8 joueurs</p></div></header>
+    ${resume?`<div class="resume"><div><b>Partie en cours</b><span>${esc(MODES[resume.S.mode].title(resume.S.opts))} · ${resume.S.players.map(p=>esc(p.name)).join(', ')}</span></div><button class="btn primary" data-act="resume">Reprendre</button></div>`:''}
+    <div class="seg tabs" role="group" aria-label="Type de jeu"><button class="${ui.tab!=='tour'?'on':''}" data-act="tab" data-v="play" aria-pressed="${ui.tab!=='tour'}">Partie</button><button class="${ui.tab==='tour'?'on':''}" data-act="tab" data-v="tour" aria-pressed="${ui.tab==='tour'}">Tournoi</button></div>
+    ${ui.tab==='tour'?tourSetupHTML():`<div class="cols">
+      <section class="block" aria-labelledby="h-jeu"><h2 id="h-jeu">Jeu</h2>
+        <div class="modes">${Object.entries(MODES).map(([k,m])=>`<button class="mode${k===cfg.mode?' on':''}" data-act="mode" data-v="${k}" aria-pressed="${k===cfg.mode}"><span class="mt">${m.tag}</span><span class="mn">${m.name}</span><span class="md">${m.desc}</span></button>`).join('')}</div>
+        <div class="optsbox"><h3>${M.name}</h3>
+          ${M.opts.map(op=>`<div class="opt"><span class="ol">${op.l}</span><div class="seg" role="group" aria-label="${op.l}">${op.c.map(([v,l],j)=>`<button class="${o[op.k]===v?'on':''}" data-act="opt" data-k="${op.k}" data-j="${j}" aria-pressed="${o[op.k]===v}">${l}</button>`).join('')}</div></div>`).join('')}
+          <p class="rules">${M.rules}</p></div>
+      </section>
+      <section class="block" aria-labelledby="h-j"><h2 id="h-j">Joueurs <span class="count">${n}/8</span></h2>
+        <ol class="plist">${cfg.players.map((nm,i)=>`<li style="--pc:var(--p${i+1})"><span class="chip num">${i+1}</span><input id="player-${i}" data-i="${i}" value="${esc(nm)}" maxlength="16" autocomplete="off" enterkeyhint="done" aria-label="Nom du joueur ${i+1}"><button class="ib" data-act="up" data-i="${i}" ${i?'':'disabled'} aria-label="Monter ${esc(nm)}">↑</button><button class="ib" data-act="del" data-i="${i}" ${n>1?'':'disabled'} aria-label="Retirer ${esc(nm)}">✕</button></li>`).join('')}</ol>
+        <div class="prow"><button class="btn" data-act="add" ${n>=8?'disabled':''}>+ Ajouter un joueur</button><button class="btn" data-act="shuffle" ${n<2?'disabled':''}>Mélanger l’ordre</button></div>
+        <label class="rnd"><input type="checkbox" id="random-order" data-act="random" ${cfg.random?'checked':''}><span>Ordre aléatoire<small>Tiré au sort à chaque partie et à chaque revanche</small></span></label>
+        ${tooFew?`<p class="note">${M.name} se joue à ${M.min} joueurs minimum.</p>`:''}
+        <button class="btn primary go" data-act="start" ${tooFew?'disabled':''}>Lancer la partie</button>
+      </section>
+    </div>`}</div></div>${tOvHTML()}`;
+}
+
+function stripHTML(st){
+  return `<div class="strip" aria-label="Tours">${st.items.map((t,i)=>`<span class="${i===st.cur?'cur':i<st.cur?'past':''}">${t}</span>`).join('')}</div>`;
+}
+
+function overlayHTML(){
+  if(ui.ask){const p=S.players[S.cur];return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="at"><p class="eyebrow">Finition ${p.score}</p><h2 id="at">Combien de fléchettes ?</h2><p>Le nombre de fléchettes utilisées compte pour la moyenne et la meilleure manche.</p><div class="dacts">${[1,2,3].filter(k=>k>=ui.ask).map(k=>`<button class="btn primary" data-ask="${k}">${k}</button>`).join('')}<button class="btn" data-ask="0">Annuler</button></div></div></div>`}
+  if(ui.quit)return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="qt"><p class="eyebrow">Pause</p><h2 id="qt">${S.tm!=null?'Retour au tableau ?':'Retour au menu ?'}</h2><p>La partie est enregistrée sur cet appareil. Vous pourrez la reprendre ${S.tm!=null?'depuis le tableau du tournoi':'depuis le menu'}.</p><div class="dacts"><button class="btn" data-act="quit-no">Continuer la partie</button><button class="btn primary" data-act="quit-yes">${S.tm!=null?'Aller au tableau':'Aller au menu'}</button></div></div></div>`;
+  if(S.over){
+    const M=MODES[S.mode];
+    let order=M.rank(S);
+    if((S.opts.legs||1)>1)order=order.slice().sort((a,b)=>S.players[b].legs-S.players[a].legs);
+    order=[S.winner,...order.filter(i=>i!==S.winner)];
+    const w=S.players[S.winner];
+    return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rt"><p class="eyebrow">${S.tm!=null&&T&&T.m[S.tm]?esc(tRound(T.m[S.tm]))+' · terminé':S.shanghai&&S.opts.instant?'Shanghai !':'Partie terminée'}</p><h2 id="rt">Victoire de ${esc(w.name)}</h2>
+      <ol class="rank">${order.map((i,k)=>{const p=S.players[i];return `<li style="--pc:var(--p${p.col+1})"><span class="pos">${k+1}</span><span class="chip"></span><div class="rn"><b>${esc(p.name)}</b><small>${M.statLine(S,p)}</small></div><span class="rv">${(S.opts.legs||1)>1?pl(p.legs,'manche')+' · ':''}${M.res(S,p)}</span></li>`}).join('')}</ol>
+      <div class="dacts">${S.tm!=null?`<button class="btn" data-act="undo">Annuler la dernière fléchette</button><button class="btn primary" data-act="tdone">Valider le résultat</button>`:`<button class="btn" data-act="undo">Annuler la dernière fléchette</button><button class="btn" data-act="home">Menu</button><button class="btn primary" data-act="rematch">Revanche</button>`}</div></div></div>`;
+  }
+  if(S.legOver){
+    const w=S.players[S.legWin];
+    return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="lt"><p class="eyebrow">Manche ${S.legNo} terminée</p><h2 id="lt">Manche pour ${esc(w.name)}</h2>
+      <ol class="rank">${S.players.map((p,i)=>i).sort((a,b)=>S.players[b].legs-S.players[a].legs).map((i,k)=>{const p=S.players[i];return `<li style="--pc:var(--p${p.col+1})"><span class="pos">${k+1}</span><span class="chip"></span><div class="rn"><b>${esc(p.name)}</b><small>${MODES[S.mode].statLine(S,p)}</small></div><span class="rv">${p.legs}/${S.opts.legs}</span></li>`}).join('')}</ol>
+      <p>${esc(S.players[(S.starter+1)%S.players.length].name)} commence la manche suivante.</p>
+      <div class="dacts"><button class="btn" data-act="undo">Annuler la dernière fléchette</button><button class="btn primary" data-act="next">Manche suivante</button></div></div></div>`;
+  }
+  return '';
+}
+
+function renderGame(){
+  const M=MODES[S.mode],p=S.players[S.cur],R=M.rounds?M.rounds(S.opts):0;
+  const inp=S.mode==='cricket'?(ui.crInput||'table'):(ui.input==='volley'&&S.mode!=='x01'?'board':ui.input);
+  CT=inp==='table';
+  const done=S.turn.length>=3||S.turnEnd;
+  const hl=M.hl?M.hl(S,p):null;
+  const slots=[0,1,2].map(i=>{const d=S.turn[i];return `<span class="slot${d?' f':''}${d&&d.n===0?' miss':''}">${d?lbl(d):''}</span>`}).join('');
+  const tt=M.turnText?M.turnText(S,p):sumTurn(S);
+  app.innerHTML=`<div class="game">
+    <header class="gbar"><button class="btn sm" data-act="menu">Menu</button>${BRAND?`<img class="gimg" src="${BRAND.src}" alt="${esc(BRAND.alt)}">`:''}
+      <div class="gt"><b>${esc(M.title(S.opts))}</b><span>${S.tm!=null&&T&&T.m[S.tm]?esc(tRound(T.m[S.tm]))+' · ':''}${(S.opts.legs||1)>1?`Manche ${S.legNo} · `:''}Tour ${R?Math.min(p.turns+1,R)+' / '+R:p.turns+1}</span></div>
+      <div class="gtools"><button class="btn sm${ui.voice?' on':''}" data-act="voice" aria-pressed="${ui.voice}">Voix</button>
+        <div class="seg sm" role="group" aria-label="Mode de saisie">${S.mode==='cricket'?`<button class="${inp==='table'?'on':''}" data-act="input" data-v="table">Tableau</button><button class="${inp==='cases'?'on':''}" data-act="input" data-v="cases">Cases</button>`:''}<button class="${inp==='board'?'on':''}" data-act="input" data-v="board">Cible</button><button class="${inp==='keys'?'on':''}" data-act="input" data-v="keys">Pavé</button>${S.mode==='x01'?`<button class="${inp==='volley'?'on':''}" data-act="input" data-v="volley">Volée</button>`:''}</div></div></header>
+    <div class="gmain${inp==='table'?' tablemode':''}">
+      <section class="scores" aria-label="Scores">${M.strip?stripHTML(M.strip(S,p)):''}${M.board(S)}</section>
+      <section class="pad" aria-label="Saisie">${inp==='table'?crKeysHTML(done):`
+        <div class="turn${S.bust?' bust':''}" style="--pc:var(--p${p.col+1})">
+          <div class="tw"><span class="chip"></span><b>${esc(who(p))}</b><span class="tt">${tt}</span></div>
+          <div class="slots">${slots}</div>
+          <div class="hint">${M.hint?M.hint(S,p):''}</div></div>
+        <div class="inwrap" id="inwrap">${inp==='cases'?cricketPadHTML():inp==='keys'?keypadHTML(hl):inp==='volley'?volleyHTML():''}</div>
+        <div class="acts"><button class="btn big" data-act="undo" ${H.length?'':'disabled'}>Annuler</button>${inp==='table'?`<button class="btn big mul${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${done?'disabled':''}>Double</button><button class="btn big mul${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${done?'disabled':''}>Triple</button>`:''}${inp==='volley'?'':`<button class="btn big" data-act="miss" ${done?'disabled':''}>Raté</button>`}<button class="btn big primary${done?' pulse':''}" data-act="next">Joueur suivant</button></div>`}
+      </section></div>
+    ${overlayHTML()}</div>`;
+  if(inp==='board'){document.getElementById('inwrap').appendChild(getBoard());updateBoard(hl)}
+}
+let lastView=null;
+function render(){if(view!==lastView){lastView=view;store.set('ochet.view',view)}view==='game'&&S?renderGame():view==='tour'&&T?renderTour():view==='champ'&&T&&T.champ!=null?renderChamp():renderSetup()}
+
+/* ================= tournoi ================= */
+const TMODES=['x01','cricket'],TMAX=32;
+const FMTS={
+  ko:{name:'Coupe',tag:'Élimination directe',desc:'Le perdant sort, le vainqueur avance jusqu’à la finale.',min:2},
+  rr:{name:'Championnat',tag:'Tous contre tous',desc:'Chacun affronte tout le monde, 2 points par victoire.',min:2},
+  gr:{name:'Poules + finale',tag:'Format Coupe du monde',desc:'Des poules, puis les 2 premiers de chaque poule en tableau final.',min:6}
+};
+let tcfg=Object.assign({name:'',fmt:'ko',mode:'x01',opts:{},team:1,gsize:4,random:true,players:['Joueur 1','Joueur 2','Joueur 3','Joueur 4']},store.get('ochet.tcfg',{}));
+if(!FMTS[tcfg.fmt])tcfg.fmt='ko';
+if(!TMODES.includes(tcfg.mode))tcfg.mode='x01';
+let T=store.get('ochet.tour',null);
+const saveT=()=>store.set('ochet.tour',T);
+const saveTcfg=()=>store.set('ochet.tcfg',tcfg);
+const teamName=m=>m.length<3?m.join(' & '):m.slice(0,-1).join(', ')+' & '+m[m.length-1];
+// in a team match the members throw in turn, and the order shifts by one each leg
+const who=p=>p.mem?p.mem[(p.turns+(S?S.legNo-1:0))%p.mem.length]:p.name;
+const tCount=()=>{const n=tcfg.players.length,t=tcfg.team;return {n,e:Math.floor(n/t),odd:n%t}};
+const tGroupsN=e=>Math.max(2,Math.round(e/tcfg.gsize));
+function tMatchesN(e){
+  if(tcfg.fmt==='ko')return e-1;
+  if(tcfg.fmt==='rr')return e*(e-1)/2;
+  const G=tGroupsN(e);let s=0;
+  for(let g=0;g<G;g++){const k=Math.floor(e/G)+(g<e%G?1:0);s+=k*(k-1)/2}
+  return s+2*G-1;
+}
+const isReady=m=>m.w==null&&m.a!=null&&m.b!=null&&m.a>=0&&m.b>=0;
+const tOrder=(x,y)=>(x.ph==='ko')-(y.ph==='ko')||x.r-y.r||(x.g||0)-(y.g||0)||x.id-y.id;
+const eName=x=>x==null?'À déterminer':x===-1?'Exempt':esc(T.ents[x].name);
+const eChip=x=>`<span class="chip" style="--pc:${x!=null&&x>=0?`var(--p${T.ents[x].col+1})`:'var(--line)'}"></span>`;
+const perfOf=a=>a.darts?(T.mode==='cricket'?a.marks:a.pts)/a.darts*3:0;
+const perfTxt=a=>a.darts?(T.mode==='cricket'?perfOf(a).toFixed(2):perfOf(a).toFixed(1)):'—';
+
+function addM(o){const id=T.m.length;T.m.push(Object.assign({id,w:null,la:0,lb:0,st:null,g:0},o));return id}
+function seedOrder(N){let s=[1];while(s.length<N){const L=s.length*2;s=s.flatMap(x=>[x,L+1-x])}return s}
+// seeds[0] is the top seed; when the field is not a power of 2 the top seeds get a bye
+function koBuild(seeds){
+  let N=2;while(N<seeds.length)N*=2;
+  const ord=seedOrder(N);let prev=[];
+  for(let i=0;i<N/2;i++)prev.push(addM({ph:'ko',r:0,a:seeds[ord[2*i]-1]??-1,b:seeds[ord[2*i+1]-1]??-1}));
+  for(let r=1;N>>r>1;r++){const cur=[];for(let i=0;i<prev.length;i+=2)cur.push(addM({ph:'ko',r,a:null,b:null,src:[prev[i],prev[i+1]]}));prev=cur}
+  T.koBuilt=true;
+}
+// circle method: every pair meets once, spread over n-1 rounds
+function rrBuild(list,ph,g){
+  const a=list.slice();if(a.length%2)a.push(-1);
+  const n=a.length;
+  for(let r=0;r<n-1;r++){
+    for(let i=0;i<n/2;i++){const x=a[i],y=a[n-1-i];if(x!==-1&&y!==-1)addM({ph,r,g,a:r%2?y:x,b:r%2?x:y})}
+    a.splice(1,0,a.pop());
+  }
+}
+function table(ids,ms){
+  const rows=ids.map(e=>({e,j:0,v:0,d:0,lf:0,la:0,P:0,darts:0,pts:0,marks:0})),by={};
+  rows.forEach(r=>by[r.e]=r);
+  for(const m of ms){
+    if(m.w==null||m.bye||!by[m.a]||!by[m.b])continue;
+    const A=by[m.a],B=by[m.b],W=m.w===0?A:B,L=m.w===0?B:A;
+    A.j++;B.j++;W.v++;L.d++;W.P+=2;A.lf+=m.la;A.la+=m.lb;B.lf+=m.lb;B.la+=m.la;
+    if(m.st)[A,B].forEach((X,k)=>{const s=m.st[k]||{};X.darts+=s.darts||0;X.pts+=s.pts||0;X.marks+=s.marks||0});
+  }
+  const h2h=(x,y)=>{const m=ms.find(m=>m.w!=null&&((m.a===x.e&&m.b===y.e)||(m.a===y.e&&m.b===x.e)));if(!m)return 0;return (m.w===0?m.a:m.b)===x.e?-1:1};
+  return rows.sort((x,y)=>y.P-x.P||(y.lf-y.la)-(x.lf-x.la)||y.lf-x.lf||h2h(x,y)||perfOf(y)-perfOf(x));
+}
+function tQualify(){
+  const G=T.groups.length,W=[],R=[];
+  T.groups.forEach((g,gi)=>{const t=table(g,T.m.filter(m=>m.ph==='g'&&m.g===gi));W.push(t[0].e);R.push(t[1].e)});
+  // each group winner meets the runner-up of the next group
+  const seeds=W.slice();
+  for(let i=0;i<G;i++)seeds[2*G-1-i]=R[(i+1)%G];
+  koBuild(seeds);
+}
+function tAdvance(){
+  let ch=true;
+  while(ch){
+    ch=false;
+    for(const m of T.m){
+      if(m.src)[0,1].forEach(k=>{const s=T.m[m.src[k]],v=s.w==null?null:s.w===0?s.a:s.b,key=k?'b':'a';if(m[key]!==v){m[key]=v;ch=true}});
+      if(m.bye&&(m.a==null||m.b==null)){m.w=null;m.bye=false;ch=true}
+      if(m.w==null&&m.a!=null&&m.b!=null&&(m.a===-1||m.b===-1)){m.w=m.a===-1?1:0;m.bye=true;ch=true}
+    }
+    if(T.fmt==='gr'&&!T.koBuilt&&T.m.every(m=>m.w!=null)){tQualify();ch=true}
+  }
+  if(T.fmt==='rr')T.champ=T.m.every(m=>m.w!=null)?table(T.ents.map((_,i)=>i),T.m)[0].e:null;
+  else if(T.koBuilt){const f=T.m.filter(m=>m.ph==='ko').reduce((a,m)=>m.r>a.r?m:a);T.champ=f.w==null?null:f.w===0?f.a:f.b}
+}
+function tRecord(id,w,la,lb,st){Object.assign(T.m[id],{w,la,lb,st:st||null,at:Date.now()});tAdvance();saveT()}
+const tCanEdit=m=>m.w!=null&&!m.bye&&!(m.ph==='g'&&T.koBuilt)&&!T.m.some(x=>x.src&&x.src.includes(m.id)&&x.w!=null&&!x.bye);
+function tClear(id){const m=T.m[id];if(!tCanEdit(m))return;Object.assign(m,{w:null,la:0,lb:0,st:null,at:null});tAdvance();saveT()}
+const KO_ONE=['Finale','Demi-finale','Quart de finale','Huitième de finale','Seizième de finale'];
+const KO_ALL=['Finale','Demi-finales','Quarts de finale','Huitièmes','Seizièmes'];
+const koRounds=()=>T.m.filter(m=>m.ph==='ko').reduce((a,m)=>Math.max(a,m.r+1),0);
+function tRound(m){
+  if(m.ph==='g')return `Poule ${String.fromCharCode(65+m.g)} · J${m.r+1}`;
+  if(m.ph==='rr')return `Journée ${m.r+1}`;
+  return KO_ONE[koRounds()-1-m.r]||`Tour ${m.r+1}`;
+}
+function tStats(){
+  const A=T.ents.map(()=>({darts:0,pts:0,marks:0,co:0,t180:0,best:0,w:0,j:0}));
+  T.m.forEach(m=>{
+    if(m.w==null||m.bye)return;
+    [m.a,m.b].forEach((e,k)=>{const a=A[e],s=m.st&&m.st[k];a.j++;if(m.w===k)a.w++;if(!s)return;
+      a.darts+=s.darts||0;a.pts+=s.pts||0;a.marks+=s.marks||0;a.co=Math.max(a.co,s.co||0);a.t180+=s.t180||0;a.best=Math.max(a.best,s.best||0)});
+  });
+  return A;
+}
+function tLive(){
+  const sv=store.get('ochet.game',null),S2=sv&&sv.S;
+  return S2&&!S2.over&&S2.tid===T.id&&T.m[S2.tm]&&T.m[S2.tm].w==null?S2.tm:null;
+}
+
+function tStart(){
+  const names=tcfg.players.map((n,i)=>n.trim()||`Joueur ${i+1}`),t=tcfg.team;
+  const order=tcfg.random?shuffle(names):names,ents=[];
+  for(let i=0;i+t<=order.length;i+=t){const mem=order.slice(i,i+t);ents.push({name:t>1?teamName(mem):mem[0],mem:t>1?mem:null,col:ents.length%8})}
+  T={id:Date.now(),name:tcfg.name.trim()||'Tournoi',fmt:tcfg.fmt,mode:tcfg.mode,opts:optsFor(tcfg.mode,tcfg.opts),team:t,ents,m:[],groups:null,koBuilt:false,champ:null};
+  const seeds=ents.map((_,i)=>i);
+  if(T.fmt==='ko')koBuild(seeds);
+  else if(T.fmt==='rr')rrBuild(seeds,'rr',0);
+  else{
+    const G=tGroupsN(ents.length);T.groups=Array.from({length:G},()=>[]);
+    seeds.forEach((x,i)=>{const row=Math.floor(i/G),c=i%G;T.groups[row%2?G-1-c:c].push(x)});
+    T.groups.forEach((g,gi)=>rrBuild(g,'g',gi));
+  }
+  tAdvance();saveT();ui.ttab=null;ui.tm=null;view='tour';render();
+}
+function tPlay(id){
+  if(tLive()===id){const sv=store.get('ochet.game',null);S=sv.S;H=sv.H||[]}
+  else{
+    const m=T.m[id],E=[T.ents[m.a],T.ents[m.b]];
+    newGame(T.mode,T.opts,E.map(e=>e.name),0,E.map(e=>e.col));
+    S.tm=id;S.tid=T.id;
+    S.players.forEach((p,i)=>{if(E[i].mem)p.mem=E[i].mem});
+    save();
+  }
+  view='game';ui.quit=false;wake();render();
+}
+
+function tRules(){
+  const L=optsFor(tcfg.mode,tcfg.opts).legs||1;
+  const f={
+    ko:`Chaque match se joue en ${pl(L,'manche')} gagnante${L>1?'s':''} ; le perdant est éliminé. Si le nombre d’inscrits n’est pas 4, 8, 16 ou 32, les premiers du tirage passent directement au tour suivant.`,
+    rr:`Chacun rencontre tous les autres une fois. Victoire = 2 points. À égalité de points : différence de manches, manches gagnées, confrontation directe, puis moyenne.`,
+    gr:`Poules de ${tcfg.gsize} environ en tous contre tous (victoire = 2 points). Les 2 premiers de chaque poule passent en phase finale ; chaque premier affronte le deuxième d’une autre poule.`
+  }[tcfg.fmt];
+  return f+(tcfg.team>1?` En équipe, les coéquipiers lancent chacun leur tour sur un score commun.`:'');
+}
+function tourSetupHTML(){
+  const M=MODES[tcfg.mode],o=optsFor(tcfg.mode,tcfg.opts),c=tCount(),F=FMTS[tcfg.fmt],tm=tcfg.team>1;
+  const err=c.odd?`Il faut un nombre de joueurs multiple de ${tcfg.team} pour former les équipes (${pl(c.odd,'joueur')} en trop).`:c.e<F.min?`${F.name} : ${F.min} ${tm?'équipes':'participants'} minimum.`:'';
+  const grouped=tm&&!tcfg.random;
+  const cur=T&&T.champ==null?`<div class="resume"><div><b>Tournoi en cours</b><span>${esc(T.name)} · ${FMTS[T.fmt].name} · ${pl(T.ents.length,T.team>1?'équipe':'participant')} · ${T.m.filter(m=>m.w!=null&&!m.bye).length}/${T.m.filter(m=>!m.bye).length} matchs</span></div><div class="prow"><button class="btn" data-act="tdelete">Supprimer</button><button class="btn primary" data-act="topen">Ouvrir le tableau</button></div></div>`
+    :T?`<div class="resume"><div><b>Dernier tournoi</b><span>${esc(T.name)} · vainqueur ${esc(T.ents[T.champ].name)}</span></div><div class="prow"><button class="btn" data-act="topen">Tableau</button><button class="btn primary" data-act="tchamp">Podium</button></div></div>`:'';
+  return `${cur}<div class="cols">
+    <section class="block" aria-labelledby="h-fmt"><h2 id="h-fmt">Format</h2>
+      <div class="modes fmts">${Object.entries(FMTS).map(([k,f])=>`<button class="mode${k===tcfg.fmt?' on':''}" data-act="tfmt" data-v="${k}" aria-pressed="${k===tcfg.fmt}"><span class="mt">${f.tag}</span><span class="mn">${f.name}</span><span class="md">${f.desc}</span></button>`).join('')}</div>
+      <div class="optsbox"><h3>Règles des matchs</h3>
+        <div class="opt"><span class="ol">Jeu</span><div class="seg" role="group" aria-label="Jeu">${TMODES.map(k=>`<button class="${k===tcfg.mode?'on':''}" data-act="tmode" data-v="${k}" aria-pressed="${k===tcfg.mode}">${MODES[k].name}</button>`).join('')}</div></div>
+        ${M.opts.map(op=>`<div class="opt"><span class="ol">${op.l}</span><div class="seg" role="group" aria-label="${op.l}">${op.c.map(([v,l],j)=>`<button class="${o[op.k]===v?'on':''}" data-act="topt" data-k="${op.k}" data-j="${j}" aria-pressed="${o[op.k]===v}">${l}</button>`).join('')}</div></div>`).join('')}
+        <div class="opt"><span class="ol">Formule</span><div class="seg" role="group" aria-label="Formule">${[[1,'Individuel'],[2,'Équipes de 2'],[3,'Équipes de 3']].map(([v,l])=>`<button class="${tcfg.team===v?'on':''}" data-act="tteam" data-v="${v}" aria-pressed="${tcfg.team===v}">${l}</button>`).join('')}</div></div>
+        ${tcfg.fmt==='gr'?`<div class="opt"><span class="ol">Taille des poules</span><div class="seg" role="group" aria-label="Taille des poules">${[3,4,5].map(v=>`<button class="${tcfg.gsize===v?'on':''}" data-act="tgsize" data-v="${v}" aria-pressed="${tcfg.gsize===v}">${v} par poule</button>`).join('')}</div></div>`:''}
+        <p class="rules">${tRules()}</p></div>
+    </section>
+    <section class="block" aria-labelledby="h-tp"><h2 id="h-tp">Participants <span class="count">${c.n}/${TMAX}</span></h2>
+      <input class="tname" id="tname" value="${esc(tcfg.name)}" placeholder="Nom du tournoi" maxlength="40" autocomplete="off" enterkeyhint="done" aria-label="Nom du tournoi">
+      <ol class="plist tlist">${tcfg.players.map((nm,i)=>{const k=Math.floor(i/tcfg.team);return `<li class="${grouped&&i&&i%tcfg.team===0?'tsep':''}" style="--pc:var(--p${(grouped?k:i)%8+1})"><span class="chip num">${grouped?k+1:i+1}</span><input id="tp-${i}" data-i="${i}" value="${esc(nm)}" maxlength="16" autocomplete="off" enterkeyhint="done" aria-label="Nom du joueur ${i+1}"><button class="ib" data-act="tup" data-i="${i}" ${i?'':'disabled'} aria-label="Monter ${esc(nm)}">↑</button><button class="ib" data-act="tdel" data-i="${i}" ${c.n>2?'':'disabled'} aria-label="Retirer ${esc(nm)}">✕</button></li>`}).join('')}</ol>
+      <div class="prow"><button class="btn" data-act="tadd" ${c.n>=TMAX?'disabled':''}>+ Ajouter un joueur</button><button class="btn" data-act="tshuffle">Mélanger</button></div>
+      <label class="rnd"><input type="checkbox" id="t-random" data-act="trandom" ${tcfg.random?'checked':''}><span>Tirage au sort<small>${tm?(tcfg.random?'Équipes et tableau tirés au sort au lancement':'Les équipes suivent l’ordre de la liste (même numéro = même équipe)'):'Tableau tiré au sort au lancement, sinon dans l’ordre de la liste'}</small></span></label>
+      ${err?`<p class="note">${err}</p>`:`<p class="tsum">${pl(c.e,tm?'équipe':'participant')} · ${pl(tMatchesN(c.e),'match')}${tcfg.fmt==='gr'?' · '+pl(tGroupsN(c.e),'poule'):''}</p>`}
+      <button class="btn primary go" data-act="tstart" ${err?'disabled':''}>Lancer le tournoi</button>
+    </section></div>`;
+}
+function tOvHTML(){
+  if(!ui.tconf||!T)return '';
+  const del=ui.tconf==='del';
+  return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="tc"><p class="eyebrow">Tournoi en cours</p><h2 id="tc">${del?'Supprimer le tournoi ?':'Remplacer le tournoi ?'}</h2><p>${del?'Le tableau et tous les résultats de':'Un nouveau tournoi efface le tableau et les résultats de'} « ${esc(T.name)} ». C’est définitif.</p><div class="dacts"><button class="btn" data-act="tconf-no">Garder</button><button class="btn primary" data-act="tconf-yes">${del?'Supprimer':'Remplacer'}</button></div></div></div>`;
+}
+
+function matchBox(m,live){
+  const fin=m.ph==='ko'&&m.r===koRounds()-1;
+  const cls=m.bye?'bye':live===m.id?'live':isReady(m)?'ready':'';
+  const side=(x,k)=>{const st=m.w==null?(x==null?'tbd':''):m.w===k?'w':'l';return `<span class="bs ${st}">${eChip(x)}<b>${eName(x)}</b><em>${m.w!=null&&!m.bye?(k?m.lb:m.la):''}</em></span>`};
+  return `<button class="bm ${cls}${fin?' final':''}" data-tm="${m.id}" aria-label="${tRound(m)}">${side(m.a,0)}${side(m.b,1)}</button>`;
+}
+function bracketHTML(live){
+  const R=koRounds();
+  let h='<div class="br">';
+  for(let r=0;r<R;r++){
+    const ms=T.m.filter(m=>m.ph==='ko'&&m.r===r);
+    let pairs='';
+    for(let i=0;i<ms.length;i+=2)pairs+=`<div class="bp">${ms.slice(i,i+2).map(m=>`<div class="bw">${matchBox(m,live)}</div>`).join('')}</div>`;
+    h+=`<div class="brc"><h4>${KO_ALL[R-1-r]||'Tour '+(r+1)}</h4><div class="brm">${pairs}</div></div>`;
+  }
+  return h+'</div>';
+}
+function standHTML(ids,ms,q){
+  const rows=table(ids,ms),done=ms.length&&ms.every(m=>m.w!=null);
+  return `<table class="stt"><thead><tr><th>#</th><th class="l">${T.team>1?'Équipe':'Joueur'}</th><th>J</th><th>V</th><th>D</th><th>+/−</th><th>Pts</th><th>${T.mode==='cricket'?'MPR':'Moy.'}</th></tr></thead><tbody>${rows.map((r,i)=>{const df=r.lf-r.la;return `<tr class="${q?(i<q?'q':''):(i===0&&r.j?'lead':'')}"><td>${i+1}</td><td class="l">${eChip(r.e)}<b>${eName(r.e)}</b>${q&&i<q&&done?'<span class="badge">QUALIFIÉ</span>':''}</td><td>${r.j}</td><td>${r.v}</td><td>${r.d}</td><td>${df>0?'+':''}${df}</td><td class="pts">${r.P}</td><td>${perfTxt(r)}</td></tr>`}).join('')}</tbody></table>`;
+}
+function stLineOf(st){
+  if(!st)return 'Résultat saisi à la main';
+  return T.mode==='cricket'?`MPR ${st.darts?(st.marks/st.darts*3).toFixed(2):'—'} · ${pl(st.marks,'marque')} · ${pl(st.darts,'fléchette')}`
+    :`Moy. ${avg3(st)} · 180 ×${st.t180||0}${st.co?' · Finition '+st.co:''} · ${pl(st.darts,'fléchette')}`;
+}
+function tDialogHTML(live){
+  const d=ui.tm;if(!d||!T.m[d.id])return '';
+  const m=T.m[d.id],L=T.opts.legs||1,E=[m.a,m.b];
+  const head=`<p class="eyebrow">${tRound(m)}</p><h2 id="tmd">${eName(m.a)}<span class="vs">contre</span>${eName(m.b)}</h2>`;
+  let body,acts;
+  if(m.w!=null){
+    body=`<p><b>${eName(E[m.w])}</b> gagne ${Math.max(m.la,m.lb)}–${Math.min(m.la,m.lb)}.</p><div class="mst">${E.map((x,k)=>`<div>${eChip(x)}<b>${eName(x)}</b><small>${stLineOf(m.st&&m.st[k])}</small></div>`).join('')}</div>`;
+    acts=`<button class="btn" data-act="tclose">Fermer</button>${tCanEdit(m)?'<button class="btn" data-act="tclear">Effacer le résultat</button>':''}`;
+    if(!tCanEdit(m))body+=`<p>${m.ph==='g'&&T.koBuilt?'La phase finale a commencé : les résultats de poule sont figés.':'Le match suivant est déjà joué : ce résultat est figé.'}</p>`;
+  }else if(d.edit){
+    body=`<p>Match joué sur une autre cible ? Indiquez le vainqueur${L>1?' et les manches du perdant':''}.</p>
+      <div class="pick">${E.map((x,k)=>`<button class="btn${d.w===k?' on':''}" data-act="tw" data-v="${k}" aria-pressed="${d.w===k}">${eName(x)}</button>`).join('')}</div>
+      ${L>1?`<div class="opt"><span class="ol">Manches du perdant</span><div class="seg" role="group" aria-label="Manches du perdant">${Array.from({length:L},(_,k)=>`<button class="${d.lo===k?'on':''}" data-act="tlo" data-v="${k}" aria-pressed="${d.lo===k}">${L}–${k}</button>`).join('')}</div></div>`:''}`;
+    acts=`<button class="btn" data-act="tclose">Annuler</button><button class="btn primary" data-act="tsave" ${d.w==null?'disabled':''}>Enregistrer</button>`;
+  }else{
+    body=`<p>${pl(L,'manche')} gagnante${L>1?'s':''} · ${esc(MODES[T.mode].title(T.opts))}. ${eName(m.a)} commence.</p>`;
+    acts=`<button class="btn" data-act="tclose">Fermer</button><button class="btn" data-act="tedit">Saisir le résultat</button><button class="btn primary" data-act="tplay" data-id="${m.id}">${live===m.id?'Reprendre le match':'Jouer le match'}</button>`;
+  }
+  return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="tmd">${head}${body}<div class="dacts">${acts}</div></div></div>`;
+}
+function renderTour(){
+  const M=MODES[T.mode],L=T.opts.legs||1,live=tLive();
+  const tab=T.fmt==='gr'?(ui.ttab==='ko'&&T.koBuilt?'ko':ui.ttab==='g'?'g':T.koBuilt?'ko':'g'):T.fmt;
+  const ready=T.m.filter(isReady).sort(tOrder);
+  const done=T.m.filter(m=>m.w!=null&&!m.bye).sort((a,b)=>(b.at||0)-(a.at||0));
+  const total=T.m.filter(m=>!m.bye).length+(T.fmt==='gr'&&!T.koBuilt?2*T.groups.length-1:0);
+  const next=live!=null?T.m[live]:ready[0];
+  let left;
+  if(tab==='ko')left=bracketHTML(live);
+  else if(tab==='rr')left=`<div class="panel"><h3>Classement</h3>${standHTML(T.ents.map((_,i)=>i),T.m,0)}</div>`;
+  else left=`<div class="groups">${T.groups.map((g,gi)=>`<div class="panel"><h3>Poule ${String.fromCharCode(65+gi)}</h3>${standHTML(g,T.m.filter(m=>m.ph==='g'&&m.g===gi),2)}</div>`).join('')}</div>${T.koBuilt?'':`<p class="tsum">Les 2 premiers de chaque poule passent en phase finale.</p>`}`;
+  const tabs=T.fmt==='gr'?`<div class="seg tabs" role="group" aria-label="Phase"><button class="${tab==='g'?'on':''}" data-act="ttab" data-v="g" aria-pressed="${tab==='g'}">Poules</button><button class="${tab==='ko'?'on':''}" data-act="ttab" data-v="ko" aria-pressed="${tab==='ko'}" ${T.koBuilt?'':'disabled'}>Phase finale</button></div>`:'';
+  const nx=next?`<div class="panel nxm"><h3>${live!=null?'Match en cours':'Prochain match'}</h3><p class="nxr">${tRound(next)}</p>
+      <div class="nxv"><span>${eChip(next.a)}<b>${eName(next.a)}</b></span><em>contre</em><span>${eChip(next.b)}<b>${eName(next.b)}</b></span></div>
+      <button class="btn primary go" data-act="tplay" data-id="${next.id}">${live!=null?'Reprendre le match':'Jouer le match'}</button></div>`
+    :T.champ!=null?`<div class="panel nxm"><h3>Tournoi terminé</h3><div class="nxv"><span>${eChip(T.champ)}<b>${eName(T.champ)}</b></span></div><button class="btn primary go" data-act="tchamp">Voir le grand vainqueur</button></div>`:'';
+  const rest=ready.filter(m=>m!==next);
+  app.innerHTML=`<div class="tour">
+    <header class="gbar"><button class="btn sm" data-act="tmenu">Menu</button>${BRAND?`<img class="gimg" src="${BRAND.src}" alt="${esc(BRAND.alt)}">`:''}
+      <div class="gt"><b>${esc(T.name)}</b><span>${FMTS[T.fmt].name} · ${esc(M.title(T.opts))}${L>1?` · ${L} manches gagnantes`:''}</span></div>
+      <div class="gtools">${T.champ!=null?'<button class="btn sm primary" data-act="tchamp">Podium</button>':`<span class="tsum">${done.length}/${total}</span>`}</div></header>
+    <div class="thub">
+      <section class="tpane" aria-label="Tableau">${tabs}${left}</section>
+      <aside class="tpane" aria-label="Matchs">${nx}
+        <div class="panel"><h3>Avancement · ${done.length}/${total} matchs</h3><div class="prg"><i style="width:${total?done.length/total*100:0}%"></i></div></div>
+        ${rest.length?`<div class="panel"><h3>À jouer · ${rest.length}</h3><ul class="ml">${rest.map(m=>`<li><button class="mlb" data-tm="${m.id}"><span class="mr">${tRound(m)}</span><span class="mv">${eChip(m.a)}${eName(m.a)}<em>–</em>${eChip(m.b)}${eName(m.b)}</span></button></li>`).join('')}</ul></div>`:''}
+        ${done.length?`<div class="panel"><h3>Résultats</h3><ul class="ml">${done.map(m=>{const w=m.w===0?m.a:m.b,l=m.w===0?m.b:m.a;return `<li><button class="mlb" data-tm="${m.id}"><span class="mr">${tRound(m)}</span><span class="mv">${eChip(w)}<b>${eName(w)}</b><em>${Math.max(m.la,m.lb)}–${Math.min(m.la,m.lb)}</em><span class="lo">${eName(l)}</span></span></button></li>`}).join('')}</ul></div>`:''}
+      </aside></div>${tDialogHTML(live)}</div>`;
+}
+
+function tPodium(){
+  if(T.fmt==='rr')return table(T.ents.map((_,i)=>i),T.m).slice(0,3).map((r,i)=>({e:r.e,p:i+1}));
+  const ko=T.m.filter(m=>m.ph==='ko'),R=koRounds(),f=ko.find(m=>m.r===R-1),lose=m=>m.w===0?m.b:m.a,out=[{e:T.champ,p:1}];
+  if(!f.bye)out.push({e:lose(f),p:2});
+  ko.filter(m=>m.r===R-2&&m.w!=null&&!m.bye).forEach(m=>out.push({e:lose(m),p:3}));
+  return out.filter(x=>x.e!=null&&x.e>=0);
+}
+function tAwards(){
+  const A=tStats(),L=[];
+  const best=f=>{let e=-1,v=0;A.forEach((a,i)=>{const x=f(a);if(x>v){v=x;e=i}});return e<0?null:{e,v}};
+  const add=(l,r,fmt)=>{if(r)L.push([l,fmt?fmt(r.v):r.v,r.e])};
+  if(T.mode==='x01'){
+    add('Meilleure moyenne',best(a=>a.darts>=9?a.pts/a.darts*3:0),v=>v.toFixed(1));
+    add('Plus haute finition',best(a=>a.co));
+    add('Meilleure volée',best(a=>a.best));
+    add('Roi du 180',best(a=>a.t180),v=>v+' ×');
+  }else{
+    add('Meilleur MPR',best(a=>a.darts>=9?a.marks/a.darts*3:0),v=>v.toFixed(2));
+    add('Plus de marques',best(a=>a.marks));
+  }
+  add('Plus de victoires',best(a=>a.w));
+  return L;
+}
+const TROPHY='<svg class="trophy" viewBox="0 0 120 120" aria-hidden="true"><path class="tl" d="M34 24H20v8c0 11 8 19 18 20M86 24h14v8c0 11-8 19-18 20"/><path class="tg" d="M32 12h56v30c0 18-12.5 31-28 31S32 60 32 42z"/><circle class="tb" cx="60" cy="38" r="13"/><circle class="tg" cx="60" cy="38" r="7"/><circle class="tb" cx="60" cy="38" r="2.6"/><rect class="tg" x="53" y="72" width="14" height="15"/><path class="tg" d="M40 86h40l5 16H35z"/><rect class="td" x="30" y="102" width="60" height="9" rx="2"/></svg>';
+function renderChamp(){
+  const c=T.ents[T.champ],pod=tPodium(),aw=tAwards(),st=tStats();
+  const nm=T.m.filter(m=>m.w!=null&&!m.bye).length,darts=st.reduce((a,x)=>a+x.darts,0);
+  const conf=Array.from({length:40},(_,i)=>`<i style="left:${(i*37)%100}%;--c:var(--p${i%8+1});--d:${((i*0.29)%3).toFixed(2)}s;--x:${(i%9-4)*14}px;--r:${(i*47)%360}deg"></i>`).join('');
+  app.innerHTML=`<div class="champ"><div class="conf" aria-hidden="true">${conf}</div><div class="cbox">
+    ${BRAND?`<img class="brandimg" src="${BRAND.src}" alt="${esc(BRAND.alt)}">`:''}${TROPHY}
+    <p class="eyebrow">${esc(T.name)} · Grand vainqueur</p>
+    <h1 class="cname" style="--pc:var(--p${c.col+1})">${esc(c.name)}</h1>
+    <div class="podium">${[2,1,3].map(p=>`<div class="pod p${p}">${pod.filter(x=>x.p===p).map(x=>`<span class="pn">${eChip(x.e)}${eName(x.e)}</span>`).join('')}<div class="pb">${p}</div></div>`).join('')}</div>
+    ${aw.length?`<div class="awards">${aw.map(([l,v,e])=>`<div class="aw"><span class="al">${l}</span><b>${v}</b><span class="an">${eChip(e)}${eName(e)}</span></div>`).join('')}</div>`:''}
+    <p class="csum">${pl(nm,'match')} · ${pl(darts,'fléchette')} · ${pl(T.ents.length,T.team>1?'équipe':'participant')}</p>
+    <div class="dacts"><button class="btn" data-act="tview">Voir le tableau</button><button class="btn" data-act="tmenu">Menu</button><button class="btn primary" data-act="tnew">Nouveau tournoi</button></div>
+  </div></div>`;
+  say(`${c.name}, grand vainqueur du tournoi`);
+}
+
+/* ================= events ================= */
+function startFromCfg(){
+  let ps=cfg.players.map((n,i)=>({n:n.trim()||`Joueur ${i+1}`,c:i}));
+  if(cfg.random)ps=shuffle(ps);
+  newGame(cfg.mode,optsFor(cfg.mode),ps.map(p=>p.n),0,ps.map(p=>p.c));
+  view='game';ui.quit=false;wake();render();
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act],[data-key],[data-mul],[data-vd],[data-vq],[data-ask],[data-cell],[data-tm]');
+  if(!b||b.disabled)return;
+  if(b.dataset.tm!=null){const m=T&&T.m[+b.dataset.tm];if(m&&m.a>=0&&m.b>=0&&m.a!=null&&m.b!=null){ui.tm={id:m.id};render()}return}
+  if(b.dataset.cell){const t=+b.dataset.cell,m=t===25?Math.min(ui.mul,2):ui.mul;ui.mul=1;throwDart({n:t,m});return}
+  if(b.dataset.key!=null){
+    const n=+b.dataset.key,m=b.dataset.m?+b.dataset.m:ui.mul;ui.mul=1;
+    throwDart(n===0?{n:0,m:0}:n===50?{n:25,m:2}:n===25?{n:25,m:Math.min(m,2)}:{n,m});
+    return;
+  }
+  if(b.dataset.ask!=null){const k=+b.dataset.ask;if(k)finishVolley(k);else{ui.ask=0;ui.vb='';render()}return}
+  if(b.dataset.vq){ui.vb=b.dataset.vq;submitVolley();return}
+  if(b.dataset.vd){ui.verr='';if(b.dataset.vd==='ok')submitVolley();else typeVolley(b.dataset.vd);return}
+  if(b.dataset.mul){const m=+b.dataset.mul;ui.mul=ui.mul===m?1:m;render();return}
+  const a=b.dataset.act,i=+b.dataset.i;
+  switch(a){
+    case 'mode':cfg.mode=b.dataset.v;saveCfg();render();break;
+    case 'opt':{const op=MODES[cfg.mode].opts.find(x=>x.k===b.dataset.k);cfg.opts[cfg.mode]=Object.assign(optsFor(cfg.mode),{[op.k]:op.c[+b.dataset.j][0]});saveCfg();render();break}
+    case 'add':if(cfg.players.length<8){cfg.players.push(`Joueur ${cfg.players.length+1}`);saveCfg();render();const el=document.getElementById('player-'+(cfg.players.length-1));if(el){el.focus();el.select()}}break;
+    case 'del':if(cfg.players.length>1){cfg.players.splice(i,1);saveCfg();render()}break;
+    case 'up':if(i>0){[cfg.players[i-1],cfg.players[i]]=[cfg.players[i],cfg.players[i-1]];saveCfg();render()}break;
+    case 'shuffle':cfg.players=shuffle(cfg.players);saveCfg();render();break;
+    case 'start':startFromCfg();break;
+    case 'resume':{const sv=store.get('ochet.game',null);if(sv&&sv.S){S=sv.S;H=sv.H||[];view='game';ui.quit=false;wake();render()}break}
+    case 'menu':ui.quit=true;render();break;
+    case 'quit-no':ui.quit=false;render();break;
+    case 'quit-yes':ui.quit=false;view=S&&S.tm!=null&&T?'tour':'setup';render();break;
+    case 'home':store.del('ochet.game');S=null;H=[];view='setup';render();break;
+    case 'rematch':{const n=S.players.length;let ps=S.players.map(p=>({n:p.name,c:p.col})),st=(S.first+1)%n;if(cfg.random){ps=shuffle(ps);st=0}newGame(S.mode,S.opts,ps.map(p=>p.n),st,ps.map(p=>p.c));render();break}
+    case 'random':cfg.random=b.checked;saveCfg();break;
+    case 'undo':ui.verr='';undo();break;
+    case 'tab':ui.tab=b.dataset.v;saveUi();render();break;
+    case 'tfmt':tcfg.fmt=b.dataset.v;saveTcfg();render();break;
+    case 'tmode':tcfg.mode=b.dataset.v;saveTcfg();render();break;
+    case 'topt':{const op=MODES[tcfg.mode].opts.find(x=>x.k===b.dataset.k);tcfg.opts[tcfg.mode]=Object.assign(optsFor(tcfg.mode,tcfg.opts),{[op.k]:op.c[+b.dataset.j][0]});saveTcfg();render();break}
+    case 'tteam':tcfg.team=+b.dataset.v;saveTcfg();render();break;
+    case 'tgsize':tcfg.gsize=+b.dataset.v;saveTcfg();render();break;
+    case 'tadd':if(tcfg.players.length<TMAX){tcfg.players.push(`Joueur ${tcfg.players.length+1}`);saveTcfg();render();const el=document.getElementById('tp-'+(tcfg.players.length-1));if(el){el.focus();el.select()}}break;
+    case 'tdel':if(tcfg.players.length>2){tcfg.players.splice(i,1);saveTcfg();render()}break;
+    case 'tup':if(i>0){[tcfg.players[i-1],tcfg.players[i]]=[tcfg.players[i],tcfg.players[i-1]];saveTcfg();render()}break;
+    case 'tshuffle':tcfg.players=shuffle(tcfg.players);saveTcfg();render();break;
+    case 'trandom':tcfg.random=b.checked;saveTcfg();render();break;
+    case 'tstart':if(T&&T.champ==null){ui.tconf='new';render()}else tStart();break;
+    case 'tdelete':ui.tconf='del';render();break;
+    case 'tconf-no':ui.tconf=null;render();break;
+    case 'tconf-yes':{const k=ui.tconf;ui.tconf=null;if(k==='new')tStart();else{T=null;store.del('ochet.tour');render()}break}
+    case 'topen':view='tour';render();break;
+    case 'tmenu':ui.tm=null;view='setup';ui.tab='tour';saveUi();render();break;
+    case 'ttab':ui.ttab=b.dataset.v;render();break;
+    case 'tplay':ui.tm=null;tPlay(+b.dataset.id);break;
+    case 'tclose':ui.tm=null;render();break;
+    case 'tedit':ui.tm={id:ui.tm.id,edit:true,w:null,lo:0};render();break;
+    case 'tw':ui.tm.w=+b.dataset.v;render();break;
+    case 'tlo':ui.tm.lo=+b.dataset.v;render();break;
+    case 'tsave':{const d=ui.tm,L=T.opts.legs||1;if(d.w==null)break;tRecord(d.id,d.w,d.w===0?L:d.lo,d.w===1?L:d.lo,null);ui.tm=null;view=T.champ!=null?'champ':'tour';render();break}
+    case 'tclear':tClear(ui.tm.id);ui.tm=null;render();break;
+    case 'tdone':{const P=S.players;if(T&&T.id===S.tid&&T.m[S.tm])tRecord(S.tm,S.winner,P[0].legs,P[1].legs,P.map(p=>p.st));store.del('ochet.game');S=null;H=[];view=T&&T.champ!=null?'champ':T?'tour':'setup';render();break}
+    case 'tchamp':view='champ';render();break;
+    case 'tview':view='tour';render();break;
+    case 'tnew':view='setup';ui.tab='tour';saveUi();render();break;
+    case 'miss':throwDart({n:0,m:0});break;
+    case 'next':nextTurn();break;
+    case 'voice':ui.voice=!ui.voice;saveUi();if(ui.voice)say('Voix activée');render();break;
+    case 'input':if(S&&S.mode==='cricket')ui.crInput=b.dataset.v;else ui.input=b.dataset.v;ui.mul=1;saveUi();render();break;
+  }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.matches('.tlist input')){tcfg.players[+t.dataset.i]=t.value;saveTcfg()}
+  else if(t.matches('.plist input')){cfg.players[+t.dataset.i]=t.value;saveCfg()}
+  else if(t.id==='tname'){tcfg.name=t.value;saveTcfg()}
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input')){if(e.key==='Enter')e.target.blur();return}
+  if(view!=='game'||!S)return;
+  if(ui.input==='volley'&&S.mode==='x01'&&!S.over&&!S.legOver&&!ui.ask&&!ui.quit){
+    if(/^[0-9]$/.test(e.key)){typeVolley(e.key);return}
+    if(e.key==='Backspace'&&ui.vb){e.preventDefault();typeVolley('del');return}
+    if(e.key==='Enter'){e.preventDefault();submitVolley();return}
+  }
+  if(e.key==='Backspace'){e.preventDefault();undo()}
+  else if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!S.over&&!ui.quit)nextTurn()}
+});
+
+/* ================= boot ================= */
+window.claude?.hot?.snapshot?.(()=>({S,H,view}));
+const boot=d=>{if(d&&d.S&&MODES[d.S.mode]){S=d.S;H=d.H||[];view=d.view||'setup'}else{const v=store.get('ochet.view','setup'),sv=store.get('ochet.game',null);if(v==='game'&&sv&&sv.S&&!sv.S.over&&MODES[sv.S.mode]){S=sv.S;H=sv.H||[];view='game'}else if(v==='tour'||v==='champ')view=v}render()};
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
+
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
