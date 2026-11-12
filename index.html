@@ -676,7 +676,9 @@ ui.mul=1;ui.quit=false;ui.vb='';ui.verr='';ui.ask=0;
 let view='setup',S=null,H=[],CT=false;
 const saveCfg=()=>store.set('oche.cfg',cfg);
 const saveUi=()=>store.set('oche.ui2',{input:ui.input,crInput:ui.crInput,voice:ui.voice});
-const save=()=>{if(S)store.set('oche.game',{S,H:H.slice(-60)})};
+let saveT=0;const saveNow=()=>{clearTimeout(saveT);saveT=0;if(S)store.set('oche.game',{S,H:H.slice(-60)})};
+const save=()=>{clearTimeout(saveT);saveT=setTimeout(saveNow,400)};
+addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&saveT)saveNow()});
 function optsFor(mode){
   const M=MODES[mode],o={},cur=cfg.opts[mode]||{};
   M.opts.forEach(op=>{o[op.k]=op.c.some(c=>c[0]===cur[op.k])?cur[op.k]:op.d});
@@ -704,7 +706,10 @@ function resetTurn(){
   const M=MODES[S.mode];M.startTurn&&M.startTurn(S,S.players[S.cur]);
 }
 function snap(){H.push(JSON.stringify(S));if(H.length>400)H.shift()}
-function undo(){if(!H.length)return;S=JSON.parse(H.pop());ui.mul=1;save();render()}
+let autoT=0;const AUTO_MS=1100;
+function stopAuto(){clearTimeout(autoT);autoT=0}
+function planAuto(){stopAuto();if(S&&!S.over&&!S.legOver&&!S.markMode&&(S.turn.length>=3||S.turnEnd))autoT=setTimeout(()=>{autoT=0;if(S&&!S.over&&!S.legOver&&(S.turn.length>=3||S.turnEnd))nextTurn()},AUTO_MS)}
+function undo(){stopAuto();if(!H.length)return;S=JSON.parse(H.pop());ui.mul=1;save();render()}
 
 function throwDart(d,pos){
   if(!S||S.over||S.legOver||S.turn.length>=3||S.turnEnd||S.markMode)return;
@@ -718,6 +723,7 @@ function throwDart(d,pos){
   save();render();
   fly(lbl(d),S.bust);
   if(S.bust)say('Dépassé');
+  planAuto();
 }
 function legWon(){
   const w=S.players[S.legWin];
@@ -726,6 +732,7 @@ function legWon(){
   else{S.legOver=true;say(`Manche pour ${w.name}`)}
 }
 function nextTurn(noSnap){
+  stopAuto();
   if(!S||S.over)return;
   if(S.legOver){snap();S.legNo++;S.starter=(S.starter+1)%S.players.length;initLeg();save();render();return}
   if(!noSnap)snap();
@@ -819,7 +826,8 @@ function getBoard(){
   h+=`<circle class="sg c-g" data-n="25" data-m="1" r="${RR.bo}"/><circle class="sg c-r" data-n="25" data-m="2" r="${RR.bi}"/>`;
   [RR.bi,RR.bo,RR.ti,RR.to,RR.di,RR.do].forEach(r=>w+=`<circle class="wire" r="${r}"/>`);
   svg.innerHTML=h+`<g pointer-events="none">${w}</g><g class="marks"></g>`;
-  svg.addEventListener('click',e=>{
+  svg.addEventListener('pointerdown',e=>{
+    if(e.button)return;
     const r=svg.getBoundingClientRect();
     const x=(e.clientX-r.left)/r.width*224-112,y=(e.clientY-r.top)/r.height*224-112;
     const dist=Math.hypot(x,y);
@@ -985,9 +993,22 @@ function startFromCfg(){
   newGame(cfg.mode,optsFor(cfg.mode),ps.map(p=>p.n),0,ps.map(p=>p.c));
   view='game';ui.quit=false;wake();render();
 }
+let fastUntil=0;
+const FAST='[data-key],[data-cell],[data-mul],[data-vd],[data-vq],[data-act=undo],[data-act=miss],[data-act=next]';
+document.addEventListener('pointerdown',e=>{
+  if(view!=='game'||e.button)return;
+  const b=e.target.closest(FAST);
+  if(!b||b.disabled)return;
+  fastUntil=performance.now()+700;
+  onTap(b);
+});
 document.addEventListener('click',e=>{
+  if(performance.now()<fastUntil&&e.target.closest(FAST))return;
   const b=e.target.closest('[data-act],[data-key],[data-mul],[data-vd],[data-vq],[data-ask],[data-cell]');
   if(!b||b.disabled)return;
+  onTap(b);
+});
+function onTap(b){
   if(b.dataset.cell){const t=+b.dataset.cell,m=t===25?Math.min(ui.mul,2):ui.mul;ui.mul=1;throwDart({n:t,m});return}
   if(b.dataset.key!=null){
     const n=+b.dataset.key,m=b.dataset.m?+b.dataset.m:ui.mul;ui.mul=1;
@@ -1020,7 +1041,7 @@ document.addEventListener('click',e=>{
     case 'voice':ui.voice=!ui.voice;saveUi();if(ui.voice)say('Voix activée');render();break;
     case 'input':if(S&&S.mode==='cricket')ui.crInput=b.dataset.v;else ui.input=b.dataset.v;ui.mul=1;saveUi();render();break;
   }
-});
+}
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.matches('.plist input')){cfg.players[+t.dataset.i]=t.value;saveCfg()}
