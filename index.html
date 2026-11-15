@@ -1172,7 +1172,16 @@ function renderGame(){
     ${overlayHTML()}</div>`;
   if(inp==='board'){document.getElementById('inwrap').appendChild(getBoard());updateBoard(hl)}
 }
-function render(){view==='game'&&S?renderGame():renderSetup()}
+/* Chaque rendu reconstruit l'écran : on garde la position de défilement (menu, scores, barre des variantes),
+   sinon choisir une option en bas du menu ramenait tout en haut. */
+let lastView='';
+function render(){
+  const v=view==='game'&&S?'game':'setup',keep=v===lastView,pos={};
+  if(keep)['.setup','.scores','.mbar'].forEach(q=>{const el=document.querySelector(q);if(el)pos[q]=[el.scrollTop,el.scrollLeft]});
+  v==='game'?renderGame():renderSetup();
+  lastView=v;
+  for(const q in pos){const el=document.querySelector(q);if(el){el.scrollTop=pos[q][0];el.scrollLeft=pos[q][1]}}
+}
 
 /* ================= events ================= */
 function startFromCfg(){
