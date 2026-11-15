@@ -133,6 +133,20 @@ button{font:inherit;color:inherit;touch-action:manipulation}
 img.glogo{width:auto;height:52px}
 .mbar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--surface-2)}
 .mbar::-webkit-scrollbar{display:none}
+.vbar{background:var(--surface-2);border-bottom:1px solid var(--line);min-width:0;max-width:100vw}
+.game{grid-template-columns:minmax(0,1fr)}
+.vbar .mbar{border-bottom:0}
+.mbar .vk{display:inline-flex;align-items:center;gap:8px}
+.mbar .vk .vl{max-width:none}
+.mbar .vk b{font-weight:800;color:var(--ink)}
+.mbar .vk.open{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.mbar .vk.open b,.mbar .vk.open .vl{color:var(--bg)}
+.mbar .vk svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;transition:transform .15s}
+.mbar .vk.open svg{transform:rotate(180deg)}
+.vpop{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:4px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.vpop .vl{font:700 .8rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.vpop button{min-height:44px;padding:0 18px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:700 1.1rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
+.vpop button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .mbar .vg{display:flex;align-items:center;gap:4px;flex:none;padding-right:10px;margin-right:4px;border-right:1px solid var(--line)}
 .mbar .vg:last-child{border-right:0}
 .mbar .vl{font:700 .72rem/1.1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);max-width:7.5em;margin-right:2px}
@@ -290,6 +304,7 @@ button.cg-c:disabled{cursor:default}
 .ck2{grid-template-columns:1fr 1.3fr 2fr 2fr 1.3fr 1.8fr}
 .ckb.nul{font-size:1.5rem;background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 2px var(--line)}
 .btn.nul{font-family:var(--f-display);font-size:1.3rem;gap:0}
+@media (max-width:560px){.ck2{gap:5px;grid-template-columns:.8fr 1.1fr 1.5fr 1.5fr 1fr 1.6fr}.ckb.nul{font-size:1.05rem;white-space:nowrap;padding:0 2px}.ckb.nxt{font-size:1.05rem}.ckb{overflow:hidden;white-space:nowrap;padding-inline:2px}.ckb .ui{width:1.8rem;height:1.8rem}}
 .nul .fx{display:inline-block;margin:0 .14em;font-size:.85em;transform:translateY(-.1em)}
 .ckb{min-height:62px;border:0;border-radius:8px;background:var(--key);color:var(--key-ink);font:600 2.1rem/1 var(--f-display);cursor:pointer;min-width:0}
 .ckb:active{filter:brightness(1.15)}
@@ -1138,12 +1153,21 @@ function overlayHTML(){
 }
 
 /* Barre du haut : le jeu (Cricket / Crazy) puis chaque option de la partie ; un clic propose de recalculer. */
+const CHEV='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
+/* Groupes de la barre : le jeu (Cricket / Crazy) puis chaque option de la partie. */
+function varGroups(){
+  const M=MODES[S.mode],fam=FAMILLE[S.mode],g=[];
+  if(fam)g.push({k:'_jeu',l:'Jeu',c:fam.map(k=>({lab:k==='crazy'?'Crazy':MODES[k].name,on:k===S.mode,attr:`data-mode="${k}"`}))});
+  M.opts.forEach(op=>g.push({k:op.k,l:op.l,c:op.c.map(([v,lab],j)=>({lab,on:S.opts[op.k]===v,attr:`data-k="${op.k}" data-j="${j}"`}))}));
+  return g;
+}
+/* Chaque groupe est un bouton « Option : valeur ▾ » ; un toucher ouvre ses choix juste en dessous. */
 function varBar(){
-  const M=MODES[S.mode],fam=FAMILLE[S.mode];
-  let h='';
-  if(fam)h+=`<div class="vg" role="group" aria-label="Jeu"><span class="vl">Jeu</span>${fam.map(k=>`<button class="${k===S.mode?'on':''}" data-act="var" data-mode="${k}" aria-pressed="${k===S.mode}">${k==='crazy'?'Crazy':MODES[k].name}</button>`).join('')}</div>`;
-  h+=M.opts.map(op=>`<div class="vg" role="group" aria-label="${op.l}"><span class="vl">${op.l}</span>${op.c.map(([v,l],j)=>`<button class="${S.opts[op.k]===v?'on':''}" data-act="var" data-k="${op.k}" data-j="${j}" aria-pressed="${S.opts[op.k]===v}">${l}</button>`).join('')}</div>`).join('');
-  return h;
+  return varGroups().map(g=>{const cur=g.c.find(c=>c.on);return `<button class="vk${ui.vopen===g.k?' open':''}" data-act="vopen" data-v="${g.k}" aria-expanded="${ui.vopen===g.k}"><span class="vl">${g.l}</span><b>${cur?cur.lab:'—'}</b>${CHEV}</button>`}).join('');
+}
+function varPop(){
+  const g=varGroups().find(x=>x.k===ui.vopen);if(!g)return '';
+  return `<div class="vpop" role="group" aria-label="${g.l}"><span class="vl">${g.l}</span>${g.c.map(c=>`<button class="${c.on?'on':''}" data-act="var" ${c.attr} aria-pressed="${c.on}">${c.lab}</button>`).join('')}</div>`;
 }
 function renderGame(){
   const M=MODES[S.mode],p=S.players[S.cur],R=M.rounds?M.rounds(S.opts):0;
@@ -1158,7 +1182,7 @@ function renderGame(){
       <div class="gt"><b>${esc(M.title(S.opts))}</b><span>${(S.opts.legs||1)>1?`Manche ${S.legNo} · `:''}Tour ${R?Math.min(p.turns+1,R)+' / '+R:p.turns+1}</span></div>
       <div class="gtools"><button class="btn sm${ui.voice?' on':''}" data-act="voice" aria-pressed="${ui.voice}">Voix</button>
         <div class="seg sm" role="group" aria-label="Mode de saisie">${['cricket','crazy'].includes(S.mode)?`<button class="${inp==='table'?'on':''}" data-act="input" data-v="table">Tableau</button><button class="${inp==='cases'?'on':''}" data-act="input" data-v="cases">Cases</button>`:''}<button class="${inp==='board'?'on':''}" data-act="input" data-v="board">Cible</button><button class="${inp==='keys'?'on':''}" data-act="input" data-v="keys">Pavé</button>${S.mode==='x01'?`<button class="${inp==='volley'?'on':''}" data-act="input" data-v="volley">Volée</button>`:''}</div></div></header>
-    <nav class="mbar" aria-label="Variantes de la partie">${varBar()}</nav>
+    <div class="vbar"><nav class="mbar" aria-label="Variantes de la partie">${varBar()}</nav>${varPop()}</div>
     <div class="gmain${inp==='table'?' tablemode':''}">
       <section class="scores" aria-label="Scores">${M.strip?stripHTML(M.strip(S,p)):''}${M.board(S)}</section>
       <section class="pad" aria-label="Saisie">${inp==='table'?crKeysHTML(done):`
@@ -1239,11 +1263,13 @@ function act(b){
     case 'next':nextTurn();break;
     case 'voice':ui.voice=!ui.voice;saveUi();if(ui.voice)say('Voix activée');render();break;
     case 'input':if(S&&['cricket','crazy'].includes(S.mode))ui.crInput=b.dataset.v;else ui.input=b.dataset.v;ui.mul=1;saveUi();render();break;
+    case 'vopen':ui.vopen=ui.vopen===b.dataset.v?null:b.dataset.v;render();break;
     case 'var':{
-      if(!S||S.over)break;
+      ui.vopen=null;
+      if(!S||S.over){render();break}
       let k=S.mode,o;
-      if(b.dataset.mode){k=b.dataset.mode;if(k===S.mode)break;o=optsPour(k,S.opts)}
-      else{const op=MODES[k].opts.find(x=>x.k===b.dataset.k),v=op.c[+b.dataset.j][0];if(S.opts[op.k]===v)break;o=Object.assign({},S.opts,{[op.k]:v})}
+      if(b.dataset.mode){k=b.dataset.mode;if(k===S.mode){render();break}o=optsPour(k,S.opts)}
+      else{const op=MODES[k].opts.find(x=>x.k===b.dataset.k),v=op.c[+b.dataset.j][0];if(S.opts[op.k]===v){render();break}o=Object.assign({},S.opts,{[op.k]:v})}
       clearTimeout(autoT);ui.sw={mode:k,opts:o};render();break}
     case 'sw-no':ui.sw=null;render();scheduleAuto();break;
     case 'sw-yes':{const w=ui.sw;ui.sw=null;switchMode(w.mode,w.opts);break}
