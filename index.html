@@ -17,7 +17,7 @@
 *,*::before,*::after{box-sizing:border-box}
 :root{color-scheme:light}
 html{height:100%}
-body{margin:0;height:100%;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:0;font:14px/1.4 system-ui,-apple-system,sans-serif}
+body{margin:0;height:100%;box-sizing:border-box;padding:0;font:14px/1.4 system-ui,-apple-system,sans-serif}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
@@ -53,7 +53,10 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 input{-webkit-user-select:text;user-select:text}
 #app{height:100%;box-sizing:border-box}
-@media (hover:none) and (pointer:coarse){#app{padding-top:16px}}
+/* L'appli occupe tout l'écran (sur iPad en plein écran, « 100 % » laissait une bande vide en bas) ; en haut, juste la
+   zone de la barre d'état d'iOS, plus 16 px sur iPhone seulement. */
+#app{position:fixed;inset:0;height:auto;padding-top:env(safe-area-inset-top,0px)}
+@media (hover:none) and (pointer:coarse) and (max-width:700px){#app{padding-top:calc(env(safe-area-inset-top,0px) + 16px)}}
 button{font:inherit;color:inherit;touch-action:manipulation}
 :focus-visible{outline:3px solid var(--p3);outline-offset:2px}
 
@@ -141,6 +144,9 @@ img.glogo{width:auto;height:52px}
 /* Chiffres centrés sur leur hauteur réelle (sans la place vide que la police garde au-dessus) */
 .ckb,.cg-s{text-box:trim-both cap alphabetic}
 .cg-c .cn{position:relative;top:calc(var(--dy,0) * -1em)}
+/* taille des chiffres = au plus 62 % de la hauteur de leur case (8 joueurs : lignes basses, ils touchaient les traits) */
+button.cg-c{container-type:size}
+.cg-c .cn{font-size:min(2.1rem,62cqh)}.cg-c.bull .cn{font-size:min(1.7rem,52cqh)}
 .cg button.cg-c{padding:0}
 /* Marques du Cricket : toujours dans leur case, avec une marge (sur les écrans peu hauts elles débordaient) */
 .tablemode .cg-x .mk,.cg-x .mk{inset:0;margin:auto;width:74%;height:74%;max-width:4rem;max-height:4rem}
