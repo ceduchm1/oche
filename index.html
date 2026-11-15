@@ -141,6 +141,8 @@ img.glogo{width:auto;height:52px}
 /* Chiffres centrés sur leur hauteur réelle (sans la place vide que la police garde au-dessus) */
 .cg-c,.ckb,.cg-s{text-box:trim-both cap alphabetic}
 .cg button.cg-c{padding:0 0 .09em}
+/* Marques du Cricket : toujours dans leur case, avec une marge (sur les écrans peu hauts elles débordaient) */
+.tablemode .cg-x .mk,.cg-x .mk{inset:0;margin:auto;width:74%;height:74%;max-width:4rem;max-height:4rem}
 @media (max-width:480px){.gbar .glogo{display:none}}
 .btn.opt svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;transition:transform .15s}
 .btn.opt.on svg{transform:rotate(180deg)}
@@ -190,7 +192,7 @@ img.glogo{width:auto;height:52px}
 .pick li b{flex:1;min-width:0}
 .pick select{font:700 1.4rem var(--f-display);min-height:46px;min-width:90px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:0 8px}
 @media (max-width:820px){.gname{display:none}.glogo{width:44px;height:44px}}
-.gmain{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,42%);gap:16px;min-height:0;padding-top:14px;padding-bottom:max(10px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.gmain{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,42%);gap:16px;min-height:0;padding-top:14px;padding-bottom:max(4px,calc(env(safe-area-inset-bottom,0px) - 10px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .scores{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px}
 .pad{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
 @media (orientation:portrait),(max-width:820px){
