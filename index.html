@@ -88,6 +88,7 @@ button{font:inherit;color:inherit;touch-action:manipulation}
 .resume{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--r);padding:14px 16px}
 .resume b{display:block;font:700 1.25rem var(--f-display);text-transform:uppercase;letter-spacing:.03em}
 .resume span{color:var(--muted);font-size:.95rem}
+.resume .dacts{flex:0 1 auto}.resume .dacts .btn{flex:1 1 auto}
 .cols{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr);gap:28px;align-items:start}
 @media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
 .block{display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -1082,7 +1083,7 @@ function renderSetup(){
   const tooFew=M.min&&n<M.min;
   app.innerHTML=`<div class="setup"><div class="sheet">
     <header class="brand tete"><div><h1>La Tête Inn</h1><p class="loc">${PIN}Belle Plagne</p><p>Oche · Compteur de fléchettes · 1 à 8 joueurs</p></div><img class="brandimg" src="${BRAND.src}" alt="Logo de La Tête Inn"></header>
-    ${resume?`<div class="resume"><div><b>Partie en cours</b><span>${esc(MODES[resume.S.mode].title(resume.S.opts))} · ${resume.S.players.map(p=>esc(p.name)).join(', ')}</span></div><button class="btn primary" data-act="resume">Reprendre</button></div>`:''}
+    ${resume?`<div class="resume"><div><b>${ui.stop?'Arrêter la partie en cours ?':'Partie en cours'}</b><span>${esc(MODES[resume.S.mode].title(resume.S.opts))} · ${resume.S.players.map(p=>esc(p.name)).join(', ')}</span></div>${ui.stop?`<div class="dacts"><button class="btn" data-act="stop-no">Non, garder</button><button class="btn primary" data-act="stop-yes">Oui, arrêter</button></div>`:`<div class="dacts"><button class="btn" data-act="stop">Arrêter la partie</button><button class="btn primary" data-act="resume">Reprendre</button></div>`}</div>`:''}
     <div class="cols">
       <section class="block" aria-labelledby="h-jeu"><h2 id="h-jeu">Jeu</h2>
         <div class="modes">${Object.keys(MODES).sort((a,b)=>(a==='crazy'?1.5:Object.keys(MODES).indexOf(a))-(b==='crazy'?1.5:Object.keys(MODES).indexOf(b))).map(k=>[k,MODES[k]]).map(([k,m])=>`<button class="mode${k===cfg.mode?' on':''}" data-act="mode" data-v="${k}" aria-pressed="${k===cfg.mode}"><span class="mt">${m.tag}</span><span class="mn">${m.name}</span><span class="md">${m.desc}</span></button>`).join('')}</div>
@@ -1112,7 +1113,7 @@ function overlayHTML(){
       <div class="dacts"><button class="btn primary" data-act="pick-ok" ${new Set(S.players.map(p=>p.num)).size<S.players.length?'disabled':''}>C’est parti</button></div></div></div>`;
   if(ui.sw){const m=MODES[ui.sw.mode],ti=m.title(ui.sw.opts),nd=(S.log||[]).reduce((a,e)=>a+e.d.length,0)+S.turn.length,vol=(S.log||[]).some(e=>e.v!=null);
     return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="swt"><p class="eyebrow">Changer de variante</p><h2 id="swt">${esc(ti)} ?</h2><p>Les scores de chaque joueur seront recalculés à partir des ${pl(nd,'fléchette')} déjà lancées${S.tgHist||S.mode==='killer'?', avec les mêmes numéros':''}. « Annuler » juste après permet de revenir à la partie actuelle.</p>${vol?'<p>Les volées saisies en total (sans le détail des fléchettes) compteront comme des ratés.</p>':''}<div class="dacts"><button class="btn" data-act="sw-no">Garder ${esc(MODES[S.mode].title(S.opts))}</button><button class="btn primary" data-act="sw-yes">Changer</button></div></div></div>`}
-  if(ui.quit)return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="qt"><p class="eyebrow">Pause</p><h2 id="qt">Retour au menu ?</h2><p>La partie est enregistrée sur cet appareil. Vous pourrez la reprendre depuis le menu.</p><div class="dacts"><button class="btn" data-act="quit-no">Continuer la partie</button><button class="btn primary" data-act="quit-yes">Aller au menu</button></div></div></div>`;
+  if(ui.quit)return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="qt"><p class="eyebrow">Pause</p><h2 id="qt">Retour au menu ?</h2><p>« Aller au menu » garde la partie pour la reprendre plus tard. « Arrêter la partie » l’efface pour repartir sur une nouvelle.</p><div class="dacts"><button class="btn" data-act="quit-no">Continuer la partie</button><button class="btn" data-act="quit-stop">Arrêter la partie</button><button class="btn primary" data-act="quit-yes">Aller au menu</button></div></div></div>`;
   if(S.over){
     const M=MODES[S.mode];
     let order=M.rank(S);
@@ -1213,6 +1214,9 @@ function act(b){
     case 'resume':{const sv=store.get('oche.game',null);if(sv&&sv.S){S=sv.S;if(!S.log)S.log=[];H=sv.H||[];view='game';ui.quit=false;wake();render()}break}
     case 'menu':ui.quit=true;render();break;
     case 'quit-no':ui.quit=false;render();break;
+    case 'stop':ui.stop=true;render();break;
+    case 'stop-no':ui.stop=false;render();break;
+    case 'stop-yes':case 'quit-stop':clearTimeout(autoT);ui.stop=false;ui.quit=false;store.del('oche.game');S=null;H=[];view='setup';render();break;
     case 'quit-yes':ui.quit=false;view='setup';render();break;
     case 'home':store.del('oche.game');S=null;H=[];view='setup';render();break;
     case 'rematch':{const n=S.players.length;let ps=S.players.map(p=>({n:p.name,c:p.col})),st=(S.first+1)%n;if(cfg.random){ps=shuffle(ps);st=0}newGame(S.mode,S.opts,ps.map(p=>p.n),st,ps.map(p=>p.c));render();break}
