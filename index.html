@@ -287,7 +287,9 @@ button.cg-c:disabled{cursor:default}
 .di{width:1.5rem;height:1.5rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;vertical-align:-2px}
 .ck{display:flex;flex-direction:column;gap:8px}
 .ck1,.ck2{display:grid;gap:8px}
-.ck2{grid-template-columns:1fr 2fr 2fr 1.3fr 1.8fr}
+.ck2{grid-template-columns:1fr 1.3fr 2fr 2fr 1.3fr 1.8fr}
+.ckb.nul{font-size:1.5rem;background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 2px var(--line)}
+.btn.nul{font-family:var(--f-display);font-size:1.3rem}
 .ckb{min-height:62px;border:0;border-radius:8px;background:var(--key);color:var(--key-ink);font:600 2.1rem/1 var(--f-display);cursor:pointer;min-width:0}
 .ckb:active{filter:brightness(1.15)}
 .ckb.dbl{background:var(--dbl);color:#FFFFFF;font-size:1.6rem;letter-spacing:.04em}
@@ -1055,7 +1057,7 @@ function crGrid(s){
 function crKeysHTML(done){
   const nums=S.tg.slice().sort((a,b)=>a-b),dis=done?'disabled':'';
   return `<div class="ck"><div class="ck1" style="grid-template-columns:repeat(${nums.length},minmax(0,1fr))">${nums.map(t=>`<button class="ckb" data-key="${t}" ${dis}>${t}</button>`).join('')}</div>
-    <div class="ck2"><button class="ckb" data-key="0" ${dis} aria-label="Raté">0</button><button class="ckb dbl${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${dis}>DOUBLE</button><button class="ckb tpl${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${dis}>TRIPLE</button><button class="ckb und" data-act="undo" ${H.length?'':'disabled'} aria-label="Annuler"><svg class="ui" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button><button class="ckb nxt${done?' pulse':''}" data-act="next">Suivant</button></div></div>`;
+    <div class="ck2"><button class="ckb" data-key="0" ${dis} aria-label="Raté">0</button><button class="ckb nul" data-act="nul" ${dis} aria-label="Aucune touche : volée nulle, joueur suivant">0 ×${3-S.turn.length}</button><button class="ckb dbl${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${dis}>DOUBLE</button><button class="ckb tpl${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${dis}>TRIPLE</button><button class="ckb und" data-act="undo" ${H.length?'':'disabled'} aria-label="Annuler"><svg class="ui" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button><button class="ckb nxt${done?' pulse':''}" data-act="next">Suivant</button></div></div>`;
 }
 function cricketPadHTML(){
   const p=S.players[S.cur];
@@ -1164,7 +1166,7 @@ function renderGame(){
           <div class="slots">${slots}</div>
           <div class="hint">${M.hint?M.hint(S,p):''}</div></div>
         <div class="inwrap" id="inwrap">${inp==='cases'?cricketPadHTML():inp==='keys'?keypadHTML(hl):inp==='volley'?volleyHTML():''}</div>
-        <div class="acts"><button class="btn big" data-act="undo" ${H.length?'':'disabled'}>Annuler</button>${inp==='table'?`<button class="btn big mul${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${done?'disabled':''}>Double</button><button class="btn big mul${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${done?'disabled':''}>Triple</button>`:''}${inp==='volley'?'':`<button class="btn big" data-act="miss" ${done?'disabled':''}>Raté</button>`}<button class="btn big primary${done?' pulse':''}" data-act="next">Joueur suivant</button></div>`}
+        <div class="acts"><button class="btn big" data-act="undo" ${H.length?'':'disabled'}>Annuler</button>${inp==='table'?`<button class="btn big mul${ui.mul===2?' on':''}" data-mul="2" aria-pressed="${ui.mul===2}" ${done?'disabled':''}>Double</button><button class="btn big mul${ui.mul===3?' on':''}" data-mul="3" aria-pressed="${ui.mul===3}" ${done?'disabled':''}>Triple</button>`:''}${inp==='volley'?'':`<button class="btn big" data-act="miss" ${done?'disabled':''}>Raté</button><button class="btn big nul" data-act="nul" ${done?'disabled':''} aria-label="Aucune touche : volée nulle, joueur suivant">0 ×${3-S.turn.length}</button>`}<button class="btn big primary${done?' pulse':''}" data-act="next">Joueur suivant</button></div>`}
       </section></div>
     ${overlayHTML()}</div>`;
   if(inp==='board'){document.getElementById('inwrap').appendChild(getBoard());updateBoard(hl)}
@@ -1178,7 +1180,7 @@ function startFromCfg(){
   newGame(cfg.mode,optsFor(cfg.mode),ps.map(p=>p.n),0,ps.map(p=>p.c));
   view='game';ui.quit=false;wake();render();
 }
-const FAST='[data-key],[data-mul],[data-vd],[data-vq],[data-cell],[data-act=undo],[data-act=miss],[data-act=next]';
+const FAST='[data-key],[data-mul],[data-vd],[data-vq],[data-cell],[data-act=undo],[data-act=miss],[data-act=next],[data-act=nul]';
 document.addEventListener('pointerdown',e=>{
   if(view!=='game'||e.button>0)return;
   const b=e.target.closest(FAST);
@@ -1223,6 +1225,7 @@ function act(b){
     case 'random':cfg.random=b.checked;saveCfg();break;
     case 'undo':ui.verr='';undo();break;
     case 'miss':throwDart({n:0,m:0});break;
+    case 'nul':if(S&&!S.over&&!S.legOver&&!S.turnEnd&&S.turn.length<3)nextTurn();break;   // fléchettes restantes = ratés, joueur suivant tout de suite
     case 'next':nextTurn();break;
     case 'voice':ui.voice=!ui.voice;saveUi();if(ui.voice)say('Voix activée');render();break;
     case 'input':if(S&&['cricket','crazy'].includes(S.mode))ui.crInput=b.dataset.v;else ui.input=b.dataset.v;ui.mul=1;saveUi();render();break;
