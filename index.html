@@ -139,8 +139,9 @@ img.glogo{width:auto;height:52px}
 .vbar.ferme{border-bottom:0;height:0;overflow:hidden}
 .btn.opt{flex-direction:row!important;white-space:nowrap;gap:6px}
 /* Chiffres centrés sur leur hauteur réelle (sans la place vide que la police garde au-dessus) */
-.cg-c,.ckb,.cg-s{text-box:trim-both cap alphabetic}
-.cg button.cg-c{padding:0 0 .09em}
+.ckb,.cg-s{text-box:trim-both cap alphabetic}
+.cg-c .cn{position:relative;top:calc(var(--dy,0) * -1em)}
+.cg button.cg-c{padding:0}
 /* Marques du Cricket : toujours dans leur case, avec une marge (sur les écrans peu hauts elles débordaient) */
 .tablemode .cg-x .mk,.cg-x .mk{inset:0;margin:auto;width:74%;height:74%;max-width:4rem;max-height:4rem}
 @media (max-width:480px){.gbar .glogo{display:none}}
@@ -1075,7 +1076,7 @@ function crGrid(s){
   for(const t of s.tg){
     const dead=P.every(q=>q.marks[t]>=3);
     for(const c of cols){
-      if(c.c){h+=`<button class="cg-c${t===25?' bull':''}${dead?' dead':''}" data-cell="${t}" ${!live||dead||s.turnEnd||s.legOver||s.turn.length>=3?'disabled':''} aria-label="Fléchette sur ${t===25?'le bull':'le '+t}">${t===25?'Bull':t}</button>`;continue}
+      if(c.c){h+=`<button class="cg-c${t===25?' bull':''}${dead?' dead':''}" data-cell="${t}" ${!live||dead||s.turnEnd||s.legOver||s.turn.length>=3?'disabled':''} aria-label="Fléchette sur ${t===25?'le bull':'le '+t}"><span class="cn">${t===25?'Bull':t}</span></button>`;continue}
       const p=P[c.i],on=c.i===s.cur&&live,k=p.marks[t],st=`style="--pc:var(--p${p.col+1})"`;
       h+=`<div class="cg-x${on?' on':''}${k>=3?' cl':''}" ${st}>${markSvg(k)}</div>`;
     }
@@ -1314,6 +1315,22 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Backspace'){e.preventDefault();undo()}
   else if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!S.over&&!ui.quit)nextTurn()}
 });
+
+/* Centrage des chiffres du tableau : chaque navigateur place la police un peu différemment (Safari les mettait trop
+   bas). On mesure sur l'appareil la vraie hauteur des chiffres et on calcule le décalage qui les centre. */
+function caleChiffres(){
+  try{
+    const c=document.createElement('canvas').getContext('2d');
+    const fam=getComputedStyle(document.documentElement).getPropertyValue('--f-display').trim()||'"Barlow Condensed",sans-serif';
+    c.font='800 100px '+fam;
+    const m=c.measureText('20'),FA=m.fontBoundingBoxAscent,FD=m.fontBoundingBoxDescent;
+    if(!FA&&FA!==0)return;
+    const base=(100-(FA+FD))/2+FA,centre=base-(m.actualBoundingBoxAscent-m.actualBoundingBoxDescent)/2;
+    document.documentElement.style.setProperty('--dy',((centre-50)/100).toFixed(3));
+  }catch(e){}
+}
+caleChiffres();
+try{document.fonts.ready.then(caleChiffres);document.fonts.addEventListener('loadingdone',caleChiffres)}catch(e){}
 
 /* ================= boot ================= */
 window.claude?.hot?.snapshot?.(()=>({S,H,view}));
