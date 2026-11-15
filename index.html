@@ -136,6 +136,14 @@ img.glogo{width:auto;height:52px}
 .vbar{background:var(--surface-2);border-bottom:1px solid var(--line);min-width:0;max-width:100vw}
 .game{grid-template-columns:minmax(0,1fr)}
 .vbar .mbar{border-bottom:0}
+.vbar.ferme{border-bottom:0;height:0;overflow:hidden}
+.btn.opt{flex-direction:row!important;white-space:nowrap;gap:6px}
+/* Chiffres centrés sur leur hauteur réelle (sans la place vide que la police garde au-dessus) */
+.cg-c,.ckb,.cg-s{text-box:trim-both cap alphabetic}
+.cg button.cg-c{padding:0 0 .09em}
+@media (max-width:480px){.gbar .glogo{display:none}}
+.btn.opt svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;transition:transform .15s}
+.btn.opt.on svg{transform:rotate(180deg)}
 .mbar .vk{display:inline-flex;align-items:center;gap:8px}
 .mbar .vk .vl{max-width:none}
 .mbar .vk b{font-weight:800;color:var(--ink)}
@@ -792,7 +800,7 @@ let ui=Object.assign({input:'board',crInput:'table',voice:false},store.get('oche
 ui.mul=1;ui.quit=false;ui.vb='';ui.verr='';ui.ask=0;ui.sw=null;
 let view='setup',S=null,H=[],CT=false;
 const saveCfg=()=>store.set('oche.cfg',cfg);
-const saveUi=()=>store.set('oche.ui2',{input:ui.input,crInput:ui.crInput,voice:ui.voice});
+const saveUi=()=>store.set('oche.ui2',{input:ui.input,crInput:ui.crInput,voice:ui.voice,vshow:!!ui.vshow});
 let saveT=0;const saveNow=()=>{clearTimeout(saveT);saveT=0;if(S)store.set('oche.game',{S,H:H.slice(-60)})};
 const save=()=>{clearTimeout(saveT);saveT=setTimeout(saveNow,400)};
 addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&saveT)saveNow()});
@@ -1181,9 +1189,9 @@ function renderGame(){
   app.innerHTML=`<div class="game">
     <header class="gbar"><button class="btn sm" data-act="menu">Menu</button><span class="gname">La Tête Inn</span><img class="glogo" src="${BRAND.src}" alt="">
       <div class="gt"><b>${esc(M.title(S.opts))}</b><span>${(S.opts.legs||1)>1?`Manche ${S.legNo} · `:''}Tour ${R?Math.min(p.turns+1,R)+' / '+R:p.turns+1}</span></div>
-      <div class="gtools"><button class="btn sm${ui.voice?' on':''}" data-act="voice" aria-pressed="${ui.voice}">Voix</button>
+      <div class="gtools"><button class="btn sm opt${ui.vshow?' on':''}" data-act="vtoggle" aria-expanded="${!!ui.vshow}">Options${CHEV}</button><button class="btn sm${ui.voice?' on':''}" data-act="voice" aria-pressed="${ui.voice}">Voix</button>
         <div class="seg sm" role="group" aria-label="Mode de saisie">${['cricket','crazy'].includes(S.mode)?`<button class="${inp==='table'?'on':''}" data-act="input" data-v="table">Tableau</button><button class="${inp==='cases'?'on':''}" data-act="input" data-v="cases">Cases</button>`:''}<button class="${inp==='board'?'on':''}" data-act="input" data-v="board">Cible</button><button class="${inp==='keys'?'on':''}" data-act="input" data-v="keys">Pavé</button>${S.mode==='x01'?`<button class="${inp==='volley'?'on':''}" data-act="input" data-v="volley">Volée</button>`:''}</div></div></header>
-    <div class="vbar"><nav class="mbar" aria-label="Variantes de la partie">${varBar()}</nav>${varPop()}</div>
+    <div class="vbar${ui.vshow?'':' ferme'}">${ui.vshow?`<nav class="mbar" aria-label="Options de la partie">${varBar()}</nav>${varPop()}`:''}</div>
     <div class="gmain${inp==='table'?' tablemode':''}">
       <section class="scores" aria-label="Scores">${M.strip?stripHTML(M.strip(S,p)):''}${M.board(S)}</section>
       <section class="pad" aria-label="Saisie">${inp==='table'?crKeysHTML(done):`
@@ -1264,6 +1272,7 @@ function act(b){
     case 'next':nextTurn();break;
     case 'voice':ui.voice=!ui.voice;saveUi();if(ui.voice)say('Voix activée');render();break;
     case 'input':if(S&&['cricket','crazy'].includes(S.mode))ui.crInput=b.dataset.v;else ui.input=b.dataset.v;ui.mul=1;saveUi();render();break;
+    case 'vtoggle':ui.vshow=!ui.vshow;ui.vopen=null;saveUi();render();break;
     case 'vopen':ui.vopen=ui.vopen===b.dataset.v?null:b.dataset.v;render();break;
     case 'var':{
       ui.vopen=null;
