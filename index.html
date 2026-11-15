@@ -132,6 +132,9 @@ button{font:inherit;color:inherit;touch-action:manipulation}
 img.glogo{width:auto;height:52px}
 .mbar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--surface-2)}
 .mbar::-webkit-scrollbar{display:none}
+.mbar .vg{display:flex;align-items:center;gap:4px;flex:none;padding-right:10px;margin-right:4px;border-right:1px solid var(--line)}
+.mbar .vg:last-child{border-right:0}
+.mbar .vl{font:700 .72rem/1.1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);max-width:7.5em;margin-right:2px}
 .mbar button{flex:none;min-height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);font:700 1.05rem/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;cursor:pointer}
 .mbar button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .mbar button:disabled{opacity:.35;cursor:default}
@@ -497,7 +500,8 @@ const MODES={
     rounds:o=>o.rounds,
     setup(s){
       const o=s.opts;
-      s.tg=o.set==='tactic'?[20,19,18,17,16,15,14,13,12,11,10,25]:o.set==='random'?shuffle(Array.from({length:20},(_,i)=>i+1)).slice(0,6).sort((a,b)=>b-a).concat(25):[20,19,18,17,16,15,25];
+      s.tg=o.set==='tactic'?[20,19,18,17,16,15,14,13,12,11,10,25]:o.set==='random'?(TGQ&&TGQ.length?TGQ.shift():shuffle(Array.from({length:20},(_,i)=>i+1)).slice(0,6).sort((a,b)=>b-a).concat(25)):[20,19,18,17,16,15,25];
+      s.tgHist=[s.tg.slice()];
     },
     leg(s,p){p.marks=Object.fromEntries(s.tg.map(t=>[t,0]));p.pts=0},
     dart(s,p,d){
@@ -608,7 +612,8 @@ const MODES={
     title:o=>`Killer · ${o.need||3} pts · ${o.lives} vies${o.hits==='double'?' · doubles':''}`,
     setup(s){
       const nums=shuffle(Array.from({length:20},(_,i)=>i+1));s.players.forEach((p,i)=>p.num=nums[i]);
-      if(s.opts.nums==='choose'&&!RP)s.pick=true;
+      if(KNUM)s.players.forEach((p,i)=>{if(KNUM[i])p.num=KNUM[i]});
+      else if(s.opts.nums==='choose'&&!RP)s.pick=true;
     },
     leg(s,p){p.lives=s.opts.lives;p.kp=0;p.killer=false},
     dart(s,p,d){
@@ -736,9 +741,15 @@ MODES.crazy=Object.assign({},MODES.cricket,{
     {k:'rounds',l:'Limite de tours',c:[[0,'Aucune'],[15,'15'],[20,'20'],[25,'25']],d:0},
     {k:'legs',l:'Manches à gagner',c:[[1,'1'],[2,'2'],[3,'3'],[5,'5']],d:1}],
   title:o=>`Crazy Cricket${o.variant==='cut'?' Cut-throat':o.variant==='none'?' sans points':''}${o.redraw?' · tirage à chaque tour':''}`,
-  setup(s){s.tg=shuffle(Array.from({length:20},(_,i)=>i+1)).slice(0,6).sort((a,b)=>b-a).concat(25)},
+  setup(s){s.tg=TGQ&&TGQ.length?TGQ.shift():shuffle(Array.from({length:20},(_,i)=>i+1)).slice(0,6).sort((a,b)=>b-a).concat(25);s.tgHist=[s.tg.slice()]},
   newRound(s){
     if(!s.opts.redraw)return;
+    if(TGQ&&TGQ.length){                 // recalcul : on reprend les tirages de la partie d'origine
+      const nx=TGQ.shift();
+      s.tg.filter(t=>!nx.includes(t)).forEach(t=>s.players.forEach(p=>delete p.marks[t]));
+      nx.filter(t=>!s.tg.includes(t)).forEach(t=>s.players.forEach(p=>p.marks[t]=0));
+      s.tg=nx.slice();(s.tgHist=s.tgHist||[]).push(s.tg.slice());return;
+    }
     const libres=shuffle(Array.from({length:20},(_,i)=>i+1).filter(n=>!s.tg.includes(n)));
     let ch=0;
     s.tg=s.tg.map(t=>{
@@ -749,6 +760,7 @@ MODES.crazy=Object.assign({},MODES.cricket,{
     });
     const b=s.tg.pop();s.tg.sort((a,c)=>c-a);s.tg.push(b);
     if(ch)s.drawn=ch;
+    (s.tgHist=s.tgHist||[]).push(s.tg.slice());
   }
 });
 MODES.atc.turnText=s=>pl(s.turn.filter((d,i)=>s.turnHit&&s.turnHit[i]).length,'touche');
@@ -878,13 +890,23 @@ function nextTurn(noSnap){
    enregistrées sont rejouées dans l'ordre, pour le même joueur. Une volée saisie en total (X01 « Volée ») ne dit pas
    où sont tombées les fléchettes : elle compte comme 3 ratés. « Annuler » juste après revient à la partie d'avant. */
 const minOk=(k,n)=>!MODES[k].min||n>=MODES[k].min;
-function switchMode(k){
-  if(!S||k===S.mode||!MODES[k])return;
+let TGQ=null,KNUM=null;    // recalcul : numéros tirés / numéros Killer de la partie d'origine, réutilisés
+/* Familles de jeux proposées dans la barre des variantes (en plus des options du jeu). */
+const FAMILLE={cricket:['cricket','crazy'],crazy:['cricket','crazy']};
+/* Options pour passer au jeu k en gardant celles de la partie qui existent aussi dans k. */
+function optsPour(k,base){const o=optsFor(k);MODES[k].opts.forEach(op=>{if(base&&op.k in base&&op.c.some(c=>c[0]===base[op.k]))o[op.k]=base[op.k]});return o}
+function switchMode(k,opts){
+  if(!S||!MODES[k])return;
+  opts=opts||optsPour(k,S.opts);
   const old=JSON.stringify(S),log=(S.log||[]).slice(),part={p:S.cur,d:S.turn.map(d=>({n:d.n,m:d.m}))};
   const names=S.players.map(p=>p.name),cols=S.players.map(p=>p.col),first=S.first;
+  // Mêmes numéros tirés si le jeu et la façon de tirer ne changent pas ; mêmes numéros Killer.
+  const memeTirage=S.tgHist&&k===S.mode&&(k==='crazy'||(opts.set==='random'&&S.opts.set==='random'));
+  TGQ=memeTirage?S.tgHist.map(x=>x.slice()):null;
+  KNUM=k==='killer'&&S.mode==='killer'?S.players.map(p=>p.num):null;
   RP=true;
   try{
-    newGame(k,optsFor(k),names,first,cols);
+    newGame(k,opts,names,first,cols);
     const play=(e,last)=>{
       if(S.over)return;
       if(S.legOver)nextTurn();
@@ -895,9 +917,9 @@ function switchMode(k){
     };
     log.forEach(e=>play(e,false));
     if(!S.over&&!S.legOver&&!S.players[part.p].out)play(part,true);
-  }finally{RP=false}
+  }finally{RP=false;TGQ=null;KNUM=null}
   H=[old];
-  cfg.mode=k;saveCfg();save();render();
+  cfg.mode=k;cfg.opts[k]=Object.assign({},opts);saveCfg();save();render();
   scheduleAuto();
 }
 
@@ -1088,8 +1110,8 @@ function overlayHTML(){
       <ol class="pick">${S.players.map((p,i)=>`<li style="--pc:var(--p${p.col+1})"><span class="chip"></span><b>${esc(p.name)}</b><select data-pick="${i}" aria-label="Numéro de ${esc(p.name)}">${Array.from({length:20},(_,k)=>`<option value="${k+1}" ${p.num===k+1?'selected':''}>${k+1}</option>`).join('')}</select></li>`).join('')}</ol>
       ${new Set(S.players.map(p=>p.num)).size<S.players.length?'<p class="note">Deux joueurs ont le même numéro.</p>':''}
       <div class="dacts"><button class="btn primary" data-act="pick-ok" ${new Set(S.players.map(p=>p.num)).size<S.players.length?'disabled':''}>C’est parti</button></div></div></div>`;
-  if(ui.sw){const m=MODES[ui.sw],nd=(S.log||[]).reduce((a,e)=>a+e.d.length,0)+S.turn.length,vol=(S.log||[]).some(e=>e.v!=null);
-    return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="swt"><p class="eyebrow">Changer de mode</p><h2 id="swt">Passer en ${esc(m.name)} ?</h2><p>Les scores de chaque joueur seront recalculés en ${esc(m.title(optsFor(ui.sw)))} à partir des ${pl(nd,'fléchette')} déjà lancées. « Annuler » juste après permet de revenir à la partie actuelle.</p>${vol?'<p>Les volées saisies en total (sans le détail des fléchettes) compteront comme des ratés.</p>':''}<div class="dacts"><button class="btn" data-act="sw-no">Rester en ${esc(MODES[S.mode].name)}</button><button class="btn primary" data-act="sw-yes">Passer en ${esc(m.name)}</button></div></div></div>`}
+  if(ui.sw){const m=MODES[ui.sw.mode],ti=m.title(ui.sw.opts),nd=(S.log||[]).reduce((a,e)=>a+e.d.length,0)+S.turn.length,vol=(S.log||[]).some(e=>e.v!=null);
+    return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="swt"><p class="eyebrow">Changer de variante</p><h2 id="swt">${esc(ti)} ?</h2><p>Les scores de chaque joueur seront recalculés à partir des ${pl(nd,'fléchette')} déjà lancées${S.tgHist||S.mode==='killer'?', avec les mêmes numéros':''}. « Annuler » juste après permet de revenir à la partie actuelle.</p>${vol?'<p>Les volées saisies en total (sans le détail des fléchettes) compteront comme des ratés.</p>':''}<div class="dacts"><button class="btn" data-act="sw-no">Garder ${esc(MODES[S.mode].title(S.opts))}</button><button class="btn primary" data-act="sw-yes">Changer</button></div></div></div>`}
   if(ui.quit)return `<div class="ov"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="qt"><p class="eyebrow">Pause</p><h2 id="qt">Retour au menu ?</h2><p>La partie est enregistrée sur cet appareil. Vous pourrez la reprendre depuis le menu.</p><div class="dacts"><button class="btn" data-act="quit-no">Continuer la partie</button><button class="btn primary" data-act="quit-yes">Aller au menu</button></div></div></div>`;
   if(S.over){
     const M=MODES[S.mode];
@@ -1111,6 +1133,14 @@ function overlayHTML(){
   return '';
 }
 
+/* Barre du haut : le jeu (Cricket / Crazy) puis chaque option de la partie ; un clic propose de recalculer. */
+function varBar(){
+  const M=MODES[S.mode],fam=FAMILLE[S.mode];
+  let h='';
+  if(fam)h+=`<div class="vg" role="group" aria-label="Jeu"><span class="vl">Jeu</span>${fam.map(k=>`<button class="${k===S.mode?'on':''}" data-act="var" data-mode="${k}" aria-pressed="${k===S.mode}">${k==='crazy'?'Crazy':MODES[k].name}</button>`).join('')}</div>`;
+  h+=M.opts.map(op=>`<div class="vg" role="group" aria-label="${op.l}"><span class="vl">${op.l}</span>${op.c.map(([v,l],j)=>`<button class="${S.opts[op.k]===v?'on':''}" data-act="var" data-k="${op.k}" data-j="${j}" aria-pressed="${S.opts[op.k]===v}">${l}</button>`).join('')}</div>`).join('');
+  return h;
+}
 function renderGame(){
   const M=MODES[S.mode],p=S.players[S.cur],R=M.rounds?M.rounds(S.opts):0;
   const inp=['cricket','crazy'].includes(S.mode)?(ui.crInput||'table'):(ui.input==='volley'&&S.mode!=='x01'?'board':ui.input);
@@ -1124,7 +1154,7 @@ function renderGame(){
       <div class="gt"><b>${esc(M.title(S.opts))}</b><span>${(S.opts.legs||1)>1?`Manche ${S.legNo} · `:''}Tour ${R?Math.min(p.turns+1,R)+' / '+R:p.turns+1}</span></div>
       <div class="gtools"><button class="btn sm${ui.voice?' on':''}" data-act="voice" aria-pressed="${ui.voice}">Voix</button>
         <div class="seg sm" role="group" aria-label="Mode de saisie">${['cricket','crazy'].includes(S.mode)?`<button class="${inp==='table'?'on':''}" data-act="input" data-v="table">Tableau</button><button class="${inp==='cases'?'on':''}" data-act="input" data-v="cases">Cases</button>`:''}<button class="${inp==='board'?'on':''}" data-act="input" data-v="board">Cible</button><button class="${inp==='keys'?'on':''}" data-act="input" data-v="keys">Pavé</button>${S.mode==='x01'?`<button class="${inp==='volley'?'on':''}" data-act="input" data-v="volley">Volée</button>`:''}</div></div></header>
-    <nav class="mbar" aria-label="Mode de jeu">${Object.keys(MODES).sort((a,b)=>(a==='crazy'?1.5:Object.keys(MODES).indexOf(a))-(b==='crazy'?1.5:Object.keys(MODES).indexOf(b))).map(k=>[k,MODES[k]]).map(([k,m])=>`<button class="${k===S.mode?'on':''}" data-act="sw" data-v="${k}" aria-pressed="${k===S.mode}" ${k!==S.mode&&!minOk(k,S.players.length)?'disabled':''}>${m.name}</button>`).join('')}</nav>
+    <nav class="mbar" aria-label="Variantes de la partie">${varBar()}</nav>
     <div class="gmain${inp==='table'?' tablemode':''}">
       <section class="scores" aria-label="Scores">${M.strip?stripHTML(M.strip(S,p)):''}${M.board(S)}</section>
       <section class="pad" aria-label="Saisie">${inp==='table'?crKeysHTML(done):`
@@ -1192,9 +1222,14 @@ function act(b){
     case 'next':nextTurn();break;
     case 'voice':ui.voice=!ui.voice;saveUi();if(ui.voice)say('Voix activée');render();break;
     case 'input':if(S&&['cricket','crazy'].includes(S.mode))ui.crInput=b.dataset.v;else ui.input=b.dataset.v;ui.mul=1;saveUi();render();break;
-    case 'sw':if(S&&b.dataset.v!==S.mode&&!S.over){clearTimeout(autoT);ui.sw=b.dataset.v;render()}break;
+    case 'var':{
+      if(!S||S.over)break;
+      let k=S.mode,o;
+      if(b.dataset.mode){k=b.dataset.mode;if(k===S.mode)break;o=optsPour(k,S.opts)}
+      else{const op=MODES[k].opts.find(x=>x.k===b.dataset.k),v=op.c[+b.dataset.j][0];if(S.opts[op.k]===v)break;o=Object.assign({},S.opts,{[op.k]:v})}
+      clearTimeout(autoT);ui.sw={mode:k,opts:o};render();break}
     case 'sw-no':ui.sw=null;render();scheduleAuto();break;
-    case 'sw-yes':{const k=ui.sw;ui.sw=null;switchMode(k);break}
+    case 'sw-yes':{const w=ui.sw;ui.sw=null;switchMode(w.mode,w.opts);break}
     case 'pick-ok':if(S&&new Set(S.players.map(p=>p.num)).size===S.players.length){S.pick=false;save();render()}break;
   }
 }
