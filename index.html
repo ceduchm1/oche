@@ -56,7 +56,7 @@ input{-webkit-user-select:text;user-select:text}
 /* L'appli occupe tout l'écran (sur iPad en plein écran, « 100 % » laissait une bande vide en bas) ; en haut, juste la
    zone de la barre d'état d'iOS, plus 16 px sur iPhone seulement. */
 #app{position:fixed;inset:0;height:auto;padding-top:env(safe-area-inset-top,0px)}
-@media (hover:none) and (pointer:coarse) and (max-width:700px){#app{padding-top:calc(env(safe-area-inset-top,0px) + 16px)}}
+@media (hover:none) and (pointer:coarse){#app{padding-top:calc(env(safe-area-inset-top,0px) + 16px)}}
 button{font:inherit;color:inherit;touch-action:manipulation}
 :focus-visible{outline:3px solid var(--p3);outline-offset:2px}
 
@@ -1337,6 +1337,19 @@ function caleChiffres(){
 }
 caleChiffres();
 try{document.fonts.ready.then(caleChiffres);document.fonts.addEventListener('loadingdone',caleChiffres)}catch(e){}
+
+/* Appli ajoutée à l'écran d'accueil (iPad/iPhone) : iOS remonte la page de la hauteur de la barre d'état et laisse une
+   bande vide en bas. On allonge l'appli jusqu'au vrai bas de l'écran (seulement pour un petit écart, par prudence). */
+function pleinEcran(){
+  try{
+    const a=document.getElementById('app');
+    const seul=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
+    const pays=innerWidth>innerHeight,sh=pays?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
+    const ecart=sh-innerHeight;
+    if(seul&&ecart>2&&ecart<=60){a.style.bottom='auto';a.style.height=sh+'px'}else{a.style.bottom='';a.style.height=''}
+  }catch(e){}
+}
+pleinEcran();addEventListener('resize',pleinEcran);addEventListener('orientationchange',()=>setTimeout(pleinEcran,300));
 
 /* ================= boot ================= */
 window.claude?.hot?.snapshot?.(()=>({S,H,view}));
